@@ -46,9 +46,11 @@ Options for your parameters:
 #### value
 the initial value of your param
 ####interval
-the interval (rate of change) for change for your param values
+the interval (rate of change) for change for your param values.
+
 You can pass another param object here, which will create another param node which will modify the interval value of the parent parameter.
-You can pass an array of any values (strings or numbers), and they will become the only parameter options
+
+You can pass an array of any values (strings or numbers), and they will become the only parameter options.
 ####min
 the minimum allowable value for your param
 ####max
