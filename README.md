@@ -22,7 +22,7 @@ With Parametric, do the following:
 ```js
 var paramify = require('parametric')
 var params = {
-    frequency: {                     
+    frequency: {
         value: 440,
 	interval: Math.pow(2, 1/12),
 	min: 0,
