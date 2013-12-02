@@ -31,7 +31,7 @@ function paramify(params){
 //	    console.log(params[key])
 	    params[key] = evt.detail.degree
 	    this.spinDegree += evt.detail.delta
-	    this.style['-webkit-transform'] = 'rotateZ('+(this.spinDegree)+'deg)'
+	    this.style['-webkit-transform'] = 'rotateZ('+(this.spinDegree)+'deg)'	  
 	})
 
 	controlBox.appendChild(dummy.firstChild)    

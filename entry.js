@@ -22,6 +22,6 @@ params = paramify(params)
 
 setInterval(function(){
     for(var z in params){
-	console.log(params[z])
+//	console.log(params[z])
     }
 },1001)
