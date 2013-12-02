@@ -1,0 +1,25 @@
+#controls{
+
+    width:100%;
+    height:100%;
+    border: 3px solid green;
+
+}
+
+.dialBox{
+    height:150px;
+    width:110px;
+    border: 3px solid rgba(150,100,150,255);
+    border-radius: 5px;
+    display:inline-block;
+    position:relative;
+}
+
+.knob{
+    margin:40px auto;
+    height:100px;
+    width:100px;
+    border-radius: 50%;
+    border: 3px dashed yellow;
+
+}
