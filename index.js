@@ -24,11 +24,13 @@ function paramify(params){
 	dummy.innerHTML = dial;
 	var xdial = dummy.firstChild
 	controlBox.appendChild(xdial);
+	var h4 = document.createElement('h4');
+	h4.textContent = key
 	var knob = xdial.getElementsByClassName('knob')[0]
+	xdial.insertBefore(h4, knob)
 	spin(knob)
 	knob.spinDegree = 0;
 	knob.addEventListener('spin', function(evt){
-//	    console.log(params[key])
 	    params[key] = evt.detail.degree
 	    this.spinDegree += evt.detail.delta
 	    this.style['-webkit-transform'] = 'rotateZ('+(this.spinDegree)+'deg)'	  
