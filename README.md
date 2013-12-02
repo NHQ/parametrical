@@ -1,11 +1,13 @@
-# Parametric
+# THIS MODULE IS NOT READY YET
+
+# Parametrical
 
 Parametric is an instant front-end for your app.  You give it your parameters; it gives you a multi-touch enabled, cross device compatible front-end.  An ugly one!
 
 Use with [browserify](https://github.com/substack/node-browserify) + [brfs](https://github.com/substack/brfs)
 
 ```
-npm install parametric
+npm install parametrical
 ```
 
 ## How To Use
@@ -26,7 +28,8 @@ var params = {
         value: 440,
         interval: Math.pow(2, 1/12),
         min: 0,
-        max: 440 * 2 * 2 * 2
+        max: 440 * 2 * 2 * 2,
+	
     }	
 }
 params = paramify(params)
