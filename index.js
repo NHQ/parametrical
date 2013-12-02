@@ -19,6 +19,9 @@ function paramify(params){
 
     var keys = Object.keys(params)
 
+    var p = copyObject(params, {})
+    console.log(p)
+
     keys.forEach(function(key, i){
 	params[key] = params[key].value
 	dummy.innerHTML = dial;
@@ -31,7 +34,11 @@ function paramify(params){
 	spin(knob)
 	knob.spinDegree = 0;
 	knob.addEventListener('spin', function(evt){
-	    params[key] = evt.detail.degree
+	    var x = p[key].interval * evt.detail.clockwise
+	    x = Math.min(p[key].max, x)
+	    x = Math.max(p[key].min, x)
+	    params[key] += x
+	    console.log(x, params[key], p[key].min, p[key].max)
 	    this.spinDegree += evt.detail.delta
 	    this.style['-webkit-transform'] = 'rotateZ('+(this.spinDegree)+'deg)'	  
 	})
@@ -40,5 +47,18 @@ function paramify(params){
     })
     
     return params
+
+}
+
+
+function copyObject(a,b){
+
+    for(var x in a){
+
+	b[x] = a[x]
+
+    }
+
+    return b
 
 }
