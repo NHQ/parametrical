@@ -2,7 +2,7 @@
 
 Parametric is an instant front-end for your app.  You give it your parameters; it gives you a multi-touch enabled, cross device compatible front-end.  An ugly one!
 
-Use with [browserify](https://github.com/substack/browserify)
+Use with [browserify](https://github.com/substack/node-browserify)
 
 ```
 npm install parametric
