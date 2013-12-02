@@ -22,11 +22,11 @@ With Parametric, do the following:
 ```
 var paramify = require('parametric')
 var params = {
-    frequency: {
-        value: 440,
-	interval: Math.pow(2, 1/12),
-	min: 0,
-	max: 440 * 2 * 2 * 2
+    frequency: {                     
+    	       value: 440,
+	       interval: Math.pow(2, 1/12),
+	       min: 0,
+	       max: 440 * 2 * 2 * 2
     }	
 }
 params = paramify(params)
