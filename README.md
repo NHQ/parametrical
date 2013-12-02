@@ -1,5 +1,7 @@
 # THIS MODULE IS NOT READY YET
 
+![wizzywig](http://distilleryimage3.ak.instagram.com/800bc78a5a2911e3b19d12b91ad31f42_8.jpg)
+
 # Parametrical
 
 Parametric is an instant front-end for your app.  You give it your parameters; it gives you a multi-touch enabled, cross device compatible front-end.  An ugly one!
