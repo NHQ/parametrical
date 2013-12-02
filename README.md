@@ -1,6 +1,6 @@
 # THIS MODULE IS NOT READY YET
 
-![wizzywig](http://distilleryimage3.ak.instagram.com/800bc78a5a2911e3b19d12b91ad31f42_8.jpg)
+<img width="200" src="http://distilleryimage3.ak.instagram.com/800bc78a5a2911e3b19d12b91ad31f42_8.jpg"></img>
 
 # Parametrical
 
