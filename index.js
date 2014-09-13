@@ -20,7 +20,7 @@ function paramify(params, el){
   
   var keys = Object.keys(params)
 
-  var p = params//copyObject(params, {})
+  var p = copyObject(params, {})
 
   keys.forEach(function(key, i){
     dummy.innerHTML = dial;
