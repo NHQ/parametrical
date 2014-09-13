@@ -1,34 +1,34 @@
-var jsynth = require('../../jsynth')
+var amod = require('amod')
+var oz = require('oscillators')
+var jdelay = require('jdelay')
+var jsynth = require('jsynth')
 var master = new webkitAudioContext()
 
 var paramify = require('./')
 
-var params = {
-
-    frequency : {
-	value: 440,
-	type: 'float',
-	interval: Math.pow(2, 1/12),
-	min: 0,
-	max: 440 * 2 * 2 * 2
+var p = {
+      f : {
+      value: .5,//master.sampleRate,
+      type: 'float',
+      gain: 1,
+      interval: 0,
+      min: 0,
+      max: 1
     },
-    amplitude : {
-	value: 1,
-	tpye: 'integer',
-	interval: .01,
-	min: 0,
-	max: 1
+      a: {
+      value: 4,
+      tpye: 'integer',
+      gain: 1,
+      min: 0,
+      max: 24
     }
 }
 
-params = paramify(params)
-
+paramify(p)
+var delay = jdelay(master.sampleRate, .25, .75)
 var synth = jsynth(master, dsp)
 synth.connect(master.destination)
-console.log(synth)
 function dsp(time){
-
-    return Math.sin(time * Math.PI * 2 * params.frequency) * params.amplitude
-
+  return oz.sine(time, 330) * amod(p.f,1 - p.f, time, Math.floor(p.a))
 }
 

@@ -15,5 +15,15 @@
     "uxer"
   ],
   "author": "Johnny Honestly <mostmodernist@gmail.com> (http://johnnyscript.us/)",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "brfs": "^1.2.0",
+    "uxer": "^6.2.0"
+  },
+  "devDependencies": {
+    "amod": "^2.0.0",
+    "jdelay": "^9.0.0",
+    "jsynth": "^2.2.0",
+    "oscillators": "^1.0.0"
+  }
 }
