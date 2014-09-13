@@ -1,6 +1,6 @@
 # parametrical 
 
-An instant front-end for your function.
+An instant front-end for your function. You give it your parameters; it gives you a multi-touch enabled, cross device compatible front-end. An ugly one!
 
 I don't feel like documenting!
 
