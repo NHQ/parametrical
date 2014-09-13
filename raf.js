@@ -1,18 +1,24 @@
-module.exports = function(){
+var raf = window.requestAnimationFrame
 
-  var raf = window.requestAnimationFrame
+var calls = []
 
-  var call = null
-
-  function caller(time){
-    if(call) call(time)
-    raf(caller)
-  }
-
-  raf(caller)
-
-  return function(fn){
-    call = fn
-  }
+var callbro = function(time){
+  calls.forEach(function(caller){
+    if(caller) caller(time)
+  })
+  raf(callbro)
 }
 
+raf(callbro)
+
+module.exports = function(fn){
+
+  var index = calls.length
+
+  calls.push(fn)
+
+  return function(fn){
+    calls[index] = fn
+  }
+
+}

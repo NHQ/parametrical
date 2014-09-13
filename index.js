@@ -9,48 +9,53 @@ var css = fs.readFileSync('./public/controls.css', 'utf8')
 
 appendCSS(css)
 
-var dummy = document.createElement('div')
-dummy.innerHTML = controlBox
-controlBox = dummy.firstChild
-document.body.appendChild(controlBox)
-
 module.exports = paramify
 
-function paramify(params){
+function paramify(params, el){
 
+  var dummy = document.createElement('div')
+  dummy.innerHTML = controlBox
+  cBox = dummy.firstChild
+  el.appendChild(cBox)
+  
   var keys = Object.keys(params)
 
-  var p = copyObject(params, {})
-  console.log(p)
+  var p = params//copyObject(params, {})
 
   keys.forEach(function(key, i){
-    params[key] = params[key].value
     dummy.innerHTML = dial;
     var xdial = dummy.firstChild
-    controlBox.appendChild(xdial);
-    var h4 = document.createElement('h4');
-    h4.textContent = key
+    cBox.appendChild(xdial);
+    var h4 = document.createElement('h1');
+    var input = document.createElement('h1')
+    input.type = 'text'
+    input.value = input.textContent = params[key].value.toString()
+    input.style.textAlign = h4.style.textAlign = 'center'
+    input.style.border = input.style.outline = 'none'
+    h4.textContent = params[key].name || key 
+    params[key] = params[key].value
     var knob = xdial.getElementsByClassName('knob')[0]
-    xdial.insertBefore(h4, knob)
+    xdial.appendChild(h4)//, knob)
+    xdial.insertBefore(input, knob)
     spin(knob)
     knob.spinDegree = 0;
     var rqf = raf()
     knob.addEventListener('spin', function(evt){
       var x = params[key] + ((evt.detail.delta / 360) * p[key]['gain']) 
-      // p[key].interval * evt.detail.clockwise
+      //window.getSelection().removeAllRanges()
       x = Math.min(p[key].max, x)
       x = Math.max(p[key].min, x)
-      console.log(x)
-      params[key] = x
       this.spinDegree += evt.detail.delta
       var self = this;
       rqf(function(){
-        self.style['-webkit-transform'] = 'rotateZ('+(self.spinDegree)+'deg)'	  
+        self.style['-webkit-transform'] = 'rotateZ('+(self.spinDegree)+'deg)'  
+        params[key] = x
+        input.textContent = x
       })
     })
 
 
-    controlBox.appendChild(dummy.firstChild)    
+    cBox.appendChild(dummy.firstChild)    
   })
     
     return params
