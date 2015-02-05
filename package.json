@@ -1,6 +1,6 @@
 {
   "name": "parametrical",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "instant front end for your functions",
   "main": "xindex.js",
   "scripts": {
