@@ -6,6 +6,7 @@ var callbro = function(time){
   calls.forEach(function(caller){
     if(caller) caller(time)
   })
+  calls = []
   raf(callbro)
 }
 
