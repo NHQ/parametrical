@@ -1,7 +1,7 @@
 var observe = require('observable')
 
-var spin = require('../uxer/spin')
-var Switch = require('../uxer/switch')
+var spin = require('uxer/spin')
+var Switch = require('uxer/switch')
 
 var raf = require('./raf.js')
 
