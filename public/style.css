@@ -1,19 +1,7 @@
-body > *{
-	-webkit-box-sizing: border-box;
-	box-sizing: border-box;
-	-webkit-margin-start: 0;
-	-webkit-margin-end: 0;
-	-webkit-padding-before: 0;
-	-webkit-padding-start: 0;
-	-webkit-padding-end: 0;
-	-webkit-box-align: start;
-	-webkit-padding-after: 0;
-	font-family:monospace;
-	display:block;
-	margin:0;
-	padding:0;
+html, body{
+  height: 100%;
+  width: 100%;
 }
-
 ::-webkit-input-placeholder{
     font-weight:900;
 }

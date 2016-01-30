@@ -1,7 +1,7 @@
 var observe = require('observable')
 
-var spin = require('uxer/spin')
-var Switch = require('uxer/switch')
+var spin = require('../uxer/spin')
+var Switch = require('../uxer/switch')
 
 var raf = require('./raf.js')
 
@@ -84,10 +84,11 @@ function paramify(el){
             x = Math.max(p[key].min, x)
             p[key].value = x
             this.spinDegree += evt.detail.delta
+            console.log(evt.detail.delta)
             var self = this;
             rqf(function(){
               self.style['-webkit-transform'] = 'rotateZ('+(self.spinDegree)+'deg)'  
-              params[key].value(p[key].value)
+          //    params[key].value(p[key].value)
             })
           })
         break;

@@ -22,6 +22,7 @@ function paramify(params, el){
   var dummy = document.createElement('div')
   dummy.innerHTML = controlBox
   cBox = dummy.firstChild
+  console.log(el)
   el.appendChild(cBox)
   
   var keys = Object.keys(params)

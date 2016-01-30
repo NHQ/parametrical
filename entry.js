@@ -24,7 +24,9 @@ var p = {
     }
 }
 
-paramify(p, document.body)
+var para = paramify( document.body)
+var params = para(p)
+console.log(params)
 var delay = jdelay(master.sampleRate, .25, .75)
 var synth = jsynth(master, dsp)
 synth.connect(master.destination)
