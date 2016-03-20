@@ -48,8 +48,9 @@ function parama(pms, cb){
           })
           break
         case 'bpm':
-          el = bpm(e, function(_switch){
-            state[key] = _switch ? e.true : e.false
+          el = bpm(e, function(bpm, interval){
+            console.log(interval)
+            state[key] = bpm
             cb(state)
           })
           break
