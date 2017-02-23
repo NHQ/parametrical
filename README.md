@@ -1,8 +1,7 @@
 # parametrical 
 
-An instant front-end for your function. You give it your parameters; it gives you a multi-touch enabled, cross device compatible front-end. An ugly one!
+An instant interface for your function. You give it your parameters; it gives you a multi-touch enabled, cross device compatible front-end.
 
-I don't feel like documenting!
 
 ## example from entry.js
 
