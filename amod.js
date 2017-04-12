@@ -15,8 +15,11 @@ module.exports = function(p){
     ctx.clearRect(0,0,canvas.width, canvas.height)
     ctx.moveTo(0, canvas.height)
     ctx.beginPath()
-    for(var x = 0; x < canvas.width; x+= 1){
-      ctx.lineTo(x, (1 - solve( x / canvas.width)) * canvas.height)
+    ctx.lineWidth = 7
+    ctx.lineColor = 'yellow'
+    for(var x = 0; x < canvas.width; x+=1 ){
+      var s = solve( x / canvas.width)
+      ctx.lineTo(s[0] * canvas.width, (1 - s[1]) * canvas.height)
     }
     ctx.stroke()
   }
@@ -26,7 +29,7 @@ module.exports = function(p){
 
   var observer = new MutationObserver(function(mutations){
     mutations.forEach(function(e){
-          console.log(e)
+      console.log(e)
       if(e.type === 'childList') {
         if(e.addedNodes[0] == parEl) {
           observer.disconnect()
@@ -62,7 +65,7 @@ module.exports = function(p){
       curves.forEach(function(e, i){
         ;(function(e, i){
           canvas.pos = findPos(canvas)
-          var dot = handle(e, canvas.pos)
+          var dot = handle(e, canvas.pos, i)
           touchdown.start(dot)
           dot.addEventListener('touchdown', function(){
             document.body.style.cursor = 'none'
@@ -112,30 +115,32 @@ module.exports = function(p){
     $.width  = node.width + 'px'
     node.height = 122
     $.height = node.height + 'px'
-    $.border = '3px solid purple'
+    $.border = '3px solid black'
     $.boxSizing = 'border-box'
-    $.background = 'green'
-    //$.position = 'absolute'
-    //$.left = 22 + 'px'
-    //$.top = 66 + 'px'
+    $.backgroundColor ='#eee'
+    $.backgroundImage = 'linear-gradient(45deg, gray 25%, transparent 25%, transparent 75%, gray 75%, gray), linear-gradient(45deg, gray 25%, transparent 25%, transparent 75%, gray 75%, gray)'
+    $.backgroundSize='30px 30px'
+    $.backgroundPosition = '0 0, 15px 15px'
+
     return node
 
   }
 
-  function handle(vec, pos){
+  function handle(vec, pos, i){
+
+    var c = ['red', 'green', 'yellow', 'blue']
     var node = document.createElement('div')
     var $ = node.style
-    $.height = $.width = '12px'
+    var r = 15
+    $.height = $.width = r+'px'
     $.position = 'absolute'
-    $.background = 'hsla(317, 90%, 30%, 1)'
+    $.border = '3px solid black'
+    $.background = c[i] 
     $.borderRadius = '50% 50%'
     $.zIndex = '100'
-    $.boxSizing = 'border-box'
-    $.cursor = 'pointer'
     var pas = findPos(parEl)
     $.left = vec[0] * canvas.width + pos[0] - pas[0] - 6 + 'px'
     $.top = pos[1] + canvas.height - canvas.height * vec[1] - pas[1] - 6 +  'px'
-    console.log($.top)
     return node
 
   }

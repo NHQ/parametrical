@@ -1,7 +1,7 @@
 var xyify = require('../uxer/xygrid')
 
 module.exports = function(p, cb){
-  if(!cb) cb = p
+  if(!cb) cb = function(){}
   var el = createNode()
   if(p && p.style){
     for(var style in p) el.style[style] = p.style[style]
@@ -11,12 +11,14 @@ module.exports = function(p, cb){
     //el.firstChild.style.display = off ? 'none' : 'inline-block'
     //el.firstChild.style.left = xy[0] - 4.5+ 'px'
     //el.firstChild.style.top = xy[1] - 4.5 + 'px'
-    cb && cb(nxy)
+    cb(nxy)
     update(xy)
-  })
+  }, p.value)
+
   return el
 
   function update(xy){
+    console.log(xy)
     var ctx = el.getContext('2d')
     ctx.clearRect(0,0, el.width, el.height)
     ctx.lineWidth = 3
@@ -40,9 +42,7 @@ function createNode(){
   node.style.border = '7px solid black'
   node.style.display = 'inline-flex'
   node.style.boxSizing = 'border-box'
-  //var d = dot()
-  
-  //node.appendChild(d)
+  node.style.userSelect = 'none'
   return node
 }
 

@@ -1,14 +1,15 @@
 html, body{
   height: 100%;
-  width: 100%;
+  cursor:pointer;
 }
 ::-webkit-input-placeholder{
     font-weight:900;
 }
 
-div{
+body, canvas, div{
     margin:0px;
     padding:0px;  
+    user-select: none;
 }
 
 textarea {

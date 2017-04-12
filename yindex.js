@@ -49,7 +49,6 @@ function parama(pms, cb){
           break
         case 'bpm':
           el = bpm(e, function(bpm, interval){
-            console.log(interval)
             state[key] = bpm
             cb(state)
           })
@@ -76,7 +75,7 @@ function parama(pms, cb){
         break;
         case 'xy':
         case 'grid':
-          el = xyify(pms, function(xy){
+          el = xyify(e, function(xy){
             var xr = e.range[2] - e.range[0]
             var yr = e.range[3] - e.range[1]
 
