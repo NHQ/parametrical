@@ -17,6 +17,8 @@ var st = ui({
     { type: 'bezier', name: 'timbre', value: [[0,0], [1/4, 1], [3/4, 1/2], [1,0]] }
 })
 
+setInterval(function(){
+console.log(st)}, 1000)
 var sidebar = document.createElement('div')
 sidebar.classList.add('sidebar')
 $ = sidebar.style

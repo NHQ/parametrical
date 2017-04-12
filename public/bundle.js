@@ -275,6 +275,8 @@ var st = ui({
     { type: 'bezier', name: 'timbre', value: [[0,0], [1/4, 1], [3/4, 1/2], [1,0]] }
 })
 
+setInterval(function(){
+console.log(st)}, 1000)
 var sidebar = document.createElement('div')
 sidebar.classList.add('sidebar')
 $ = sidebar.style
@@ -648,7 +650,6 @@ module.exports = function(p, cb){
   return el
 
   function update(xy){
-    console.log(xy)
     var ctx = el.getContext('2d')
     ctx.clearRect(0,0, el.width, el.height)
     ctx.lineWidth = 3

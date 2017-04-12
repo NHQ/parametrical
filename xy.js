@@ -18,7 +18,6 @@ module.exports = function(p, cb){
   return el
 
   function update(xy){
-    console.log(xy)
     var ctx = el.getContext('2d')
     ctx.clearRect(0,0, el.width, el.height)
     ctx.lineWidth = 3
