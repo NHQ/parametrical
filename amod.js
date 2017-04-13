@@ -1,5 +1,5 @@
-var solver = require('../beezy')
-var touchdown = require('../touchdown')
+var solver = require('beezy')
+var touchdown = require('touchdown')
 var findPos = require('./findPosition')
 
 module.exports = function(p){

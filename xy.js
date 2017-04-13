@@ -1,4 +1,4 @@
-var xyify = require('../uxer/xygrid')
+var xyify = require('uxer/xygrid')
 
 module.exports = function(p, cb){
   if(!cb) cb = function(){}

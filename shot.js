@@ -1,4 +1,4 @@
-var swtch = require('../uxer/shot')
+var swtch = require('uxer/shot')
 
 module.exports = function(p, cb){
 

@@ -1,4 +1,4 @@
-var swtch = require('../uxer/switch')
+var swtch = require('uxer/switch')
 
 module.exports = function(p, cb){
 

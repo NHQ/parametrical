@@ -1,4 +1,4 @@
-var spin = require('../uxer/spinx')
+var spin = require('uxer/spinx')
 
 module.exports = function(param, cb){
   if(param === undefined) param = function(){}

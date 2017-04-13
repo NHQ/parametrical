@@ -1,4 +1,4 @@
-var swtch = require('../uxer/bpm')
+var swtch = require('uxer/bpm')
 
 module.exports = function(p, cb){
 
