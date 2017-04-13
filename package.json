@@ -1,6 +1,6 @@
 {
   "name": "parametrical",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "instant front end for your functions",
   "main": "yindex.js",
   "scripts": {
