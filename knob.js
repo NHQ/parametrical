@@ -1,4 +1,4 @@
-var spin = require('uxer/spinx')
+var spin = require('../uxer/spinx')
 
 module.exports = function(param, cb){
   if(param === undefined) param = function(){}
@@ -6,29 +6,25 @@ module.exports = function(param, cb){
     cb = param
     param = {}
   }
-  var knob = createKnob()
+  var knob = param.el || createKnob()
   if(param.style){
     for(var style in param.style){
       knob.style[style] = param.style[style]
     }
   }
 
-  knob.addEventListener('DOMNodeInserted', function(evt){
     var amplitude = 0
-    setTimeout(function(){
-      spin(knob, function(_delta){
+      spin(knob, function(_delta, a){
+      //console.log(_delta, a)
         //console.log(total * 180 / Math.PI)
         amplitude = amplitude + -_delta 
         cb(-_delta, amplitude / Math.PI / 2)
         ;(function(el, _delta){
-          //onsole.log(_delta, amplitude / Math.PI / 2)
           window.requestAnimationFrame(function(){
-            el.style.transform = 'rotateZ('+ (amplitude * 180 / Math.PI ) + 'deg)'
+            el.style.transform = 'rotateZ('+ (2 * amplitude * 180 / Math.PI ) + 'deg)'
         })})(knob, _delta)
       })
-    }, 1000)
     
-  }, false)
 
   return knob
 

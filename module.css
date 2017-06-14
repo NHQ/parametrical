@@ -1,0 +1,15 @@
+.module{
+  height: 100%;
+  display: flex;
+  flex-wrap:wrap;
+  justify-content: space-around;
+  align-items: space-between;
+}
+
+.dial{
+  min-width: 200px;
+  height:200px;
+  border-radius: 50%;
+  border: 7px dotted black;
+  border-top: 7px solid yellow;
+}

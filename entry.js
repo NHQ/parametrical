@@ -12,9 +12,9 @@ var st = ui({
   fire:
     { type: 'shot', name: 'wahwah', false: 0, true: 1, value: 0 },
   bpm:
-    { type: 'bpm', name: 'bpm tap', false: 0, true: 1, value: 0 },
+    { type: 'bpm', name: 'bpm tap', value: 0 },
   timbre:
-    { type: 'bezier', name: 'timbre', value: [[0,0], [1/4, 1], [3/4, 1/2], [1,0]] }
+    { type: 'bezier', name: 'timbre', value: [[0,0], [1/4, 1], [1/3, 1/2], [2/3, 1/2],[3/4, 1/2], [1,0]] }
 })
 
 setInterval(function(){

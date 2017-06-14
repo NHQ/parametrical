@@ -36,6 +36,7 @@ function parama(pms, cb){
       switch(e.type){
         case 'amod':
         case 'bezier':
+          if(state[key] === 1) state[key] = e.value = [[0,0], [1/4, 1], [3/4, 1/2], [1,0]]
           el = amod(e, function(curves){
             state[key] = curves
             cb(state[key])
@@ -90,7 +91,7 @@ function parama(pms, cb){
         break
       }
       e['uuid'] = uuid()
-      Object.assign(el.dataset, e)
+//      Object.assign(el.dataset, e)
       return el
     })
     ui.state = state

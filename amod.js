@@ -3,7 +3,7 @@ var touchdown = require('touchdown')
 var findPos = require('./findPosition')
 
 module.exports = function(p){
-  var curves = p.value
+  var curves = p.value 
   var canvas = canv()//document.createElement('canvas')
   var parEl = parent()
 
@@ -48,6 +48,7 @@ module.exports = function(p){
   function observeDown(pa, el, cb){
     var obs = new MutationObserver(function(mutations){
       mutations.forEach(function(e){
+      console.log(e)
         donce()
       })
     })
@@ -77,11 +78,9 @@ module.exports = function(p){
             window.requestAnimationFrame(function(){
               dot.style.left = e.detail.x - pas[0]  + window.scrollX - 6 + 'px'
               dot.style.top =  e.detail.y - pas[1]  + window.scrollY - 6 + 'px'
-              console.log(e.detail.offsetX)
               curves[i][0] = (e.detail.x  - (canvas.pos[0] - window.scrollX)) / canvas.width
               curves[i][1] = (canvas.height - e.detail.y + (canvas.pos[1] - window.scrollY)) / canvas.height
               draw()
-              console.log(curves[i])
             })
           })
           parEl.appendChild(dot)
