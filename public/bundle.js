@@ -1,4 +1,715 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+var binom = require('binomial')
+
+module.exports = solver // takes a rayray of control points of n scale bezier curves
+
+function beezn(scale){
+  var fn = ''
+  var bi = Array(scale + 1).fill(0).map(function(e,i){
+    return binom.get(scale, i)
+  })
+  for(var x = 0; x <= scale; x++){
+    fn += '(Math.pow(1 - x, ' + (scale - x) + ') * Math.pow(x, ' + x + ') * y['+x+'] '
+    if(x > 0 && x < scale) fn += '* ' + bi[x] + ') '
+    else fn += ') '
+    if(x < scale) fn += '+ '
+  }
+  fn = new Function('x,y', 'return ' + fn)
+  return fn 
+}
+
+function solver(curves){
+  var scale = curves.length
+  
+  var fn = beezn(scale - 1)
+  var x = curves.map(function(e){return e[0]})
+  var y = curves.map(function(e){return e[1]})
+
+  return function(t){
+    return [fn(t, x), fn(t, y)]
+    //return fn(fn(t, x), y)
+  }
+}
+
+},{"binomial":2}],2:[function(require,module,exports){
+if ( typeof exports != 'object' || exports === undefined )  // browser context
+{
+	var binomial = {};
+}
+else // node.js context
+{
+	var binomial = module.exports = {};
+}
+
+(function( binomial, undefined ) {
+
+	var memo = new Array(50);
+
+	binomial.get = function(n, k) {
+
+		if (k === 0) {
+			return 1;
+		}
+
+		if (n === 0 || k > n) {
+			return 0;
+		}
+
+		if (k > n - k) {
+        	k = n - k
+        }
+
+		if ( memo_exists(n,k) ) {
+			return get_memo(n,k);
+		}
+
+	    var r = 1,
+	    	n_o = n;
+
+	    for (var d=1; d <= k; d++) {
+
+	    	if ( memo_exists(n_o, d) ) {
+	    		n--;
+	    		r = get_memo(n_o, d);
+	    		continue;
+	    	}
+
+			r *= n--;
+	  		r /= d;
+
+	  		memoize(n_o, d, r);
+	    	
+	    }
+
+	    return r;
+
+	};
+
+	binomial.get_no_memo = function(n, k) {
+
+		if (k === 0) {
+			return 1;
+		}
+
+		if (n === 0 || k > n) {
+			return 0;
+		}
+
+		if (k > n - k) {
+        	k = n - k
+        }
+
+	    var r = 1,
+	    	n_o = n;
+
+	    for (var d=1; d <= k; d++) {
+
+			r *= n--;
+	  		r /= d;
+
+	    }
+
+	    return r;
+	};
+
+	function memo_exists(n, k) {
+
+		return ( memo[n] != undefined && memo[n][k] != undefined );
+
+	};
+
+	function get_memo(n, k) {
+
+		return memo[n][k];
+
+	};
+
+	function memoize(n, k, val) {
+
+		if ( memo.length < n ) {
+			memo.length = n;
+			memo[n] = new Array(k+5);
+		} else if ( memo[n] === undefined ) {
+			memo[n] = new Array(k);
+		}
+
+		if (memo[n].length < k) {
+			memo[n] = new Array(k+5);
+		}
+
+		memo[n][k] = val;
+
+	};
+
+})(binomial);
+},{}],3:[function(require,module,exports){
+module.exports = delayo
+
+function delayo(delay, ArrayType, reverse){
+  if(!(this instanceof delayo)) return new delayo(delay, ArrayType, reverse);
+  this.buffer = new ArrayType(delay );
+  this.buffer.fill(0)
+  this.endpoint = delay - 1
+  this.writeOffset = 0
+  this.readOffset = 1//reverse ? delay - 1: delay - 1;
+  this.delay = delay
+  this.type = ArrayType
+}
+
+delayo.prototype.read = function(){
+  if(this.readOffset === this.endpoint) this.readOffset = 0
+  return this.buffer[this.readOffset++] 
+}
+
+delayo.prototype.write = function(x){
+  if(this.writeOffset === this.endpoint) this.writeOffset = 0;
+  this.buffer[this.writeOffset++] = x
+}
+
+delayo.prototype.reverseRead = function(){
+  if(this.readOffset ===  0) this.readOffset = this.endpoint
+  return this.buffer[this.readOffset--] 
+}
+
+delayo.prototype.reverseWrite = function(x){
+  if(this.writeOffset === 0) this.writeOffset = this.endpoint
+  return this.buffer[this.writeOffset--] = x
+}
+
+delayo.prototype.setDelay = function(x){
+  var r = x / this.delay
+  var buf = new this.type(x * 2)
+  buf.set(this.buffer)
+  this.buffer = buf
+}
+
+delayo.prototype.sample = function(s, fb, m){
+  var x = this.read()
+  this.write((x * fb) + s)
+  return x 
+}
+
+delayo.prototype.reverseSample = function(s, fb, m){
+  var x = this.read()
+  this.reverseWrite(((x * fb) + s) / 2)
+  return x * m + s
+}
+
+delayo.prototype.setInterval = function(x){
+
+  this.readOffset += x
+}
+
+},{}],4:[function(require,module,exports){
+var general = require('jgauss').general
+
+module.exports = overtone
+
+function overtone(t,  f,  u,  s,  m, i, sine, phase){
+	  var x = 1;
+    var y = 0;
+    for(var ii = 0; ii <= i; ii++){
+      var g = general(x, u, s);
+    	y += sine(t, x * f, phase) * g;
+      x *= m
+    }
+    return y;	
+}
+
+},{"jgauss":5}],5:[function(require,module,exports){
+var sqrtau = Math.sqrt(Math.PI * 2)
+
+module.exports.standard = standard
+module.exports.general = general
+
+function standard(x){
+  return Math.pow(Math.E, -(1/2) * (Math.pow(x, 2))) / sqrtau
+}
+
+function general(x, u, s){
+  return (1 / s) * standard((x - u) / s) 
+}
+
+},{}],6:[function(require,module,exports){
+var nvelope = require('nvelope')
+
+
+module.exports = chrono
+
+function chrono(_time){
+  if(!(this instanceof chrono)) return new chrono(_time)
+  var self = this
+  this.ret = {}
+  this.gens = []
+  this.time = _time || 0
+  this.start = _time || 0
+
+  this.set = function(time, synth, mods){
+    var x;
+    self.gens.push(x = new generate(time, synth, mods))
+    return x
+  }
+  this.tick = function(t, s, i){
+    self.time = t
+    gc(t)
+    return self.gens.reduce(function(a,e){
+    	return a + e.signal(t, s, i)
+    },0)
+  }
+  
+  function gc(t){
+    self.gens = self.gens.filter(function(e){
+      if(e.start + e.dur < t) return false
+      else return true 
+    })
+  }
+}
+
+function generate(_time, synth, mod){
+  if(!(this instanceof generate)) return new generate(_time, synth, mod)
+  var self = this
+  this.start = _time
+  if(mod === Infinity){
+    this.dur = mod
+    this.env = function(){return 1}
+    }
+  else{
+    this.dur = mod.durations.reduce(function(acc, e){
+      return acc + e
+    },0)
+    this.env = nvelope(mod.curves, mod.durations)
+  }
+  this.synth = synth
+  this.signal = function(t, s, i){
+  	return self.synth(t, s, i) * self.env(t - self.start)
+  }
+}
+
+},{"nvelope":8}],7:[function(require,module,exports){
+module.exports = function (pts) {
+        return function (t) {
+                for (var a = pts; a.length > 1; a = b){
+                        for (var i = 0, b = [], j; i < a.length - 1; i++){
+                                for (b[i] = [], j = 1; j < a[i].length; j++){
+                                        b[i][j] = a[i][j] * (1 - t) + a[i+1][j] * t;
+                                }
+                        }
+                }
+                return a[0][1];
+	}    
+}
+
+
+
+},{}],8:[function(require,module,exports){
+var amod = require( './amod.js');
+var tnorm = require('normalize-time');
+
+module.exports = function(pts, durs){
+	
+	pts = pts.map(amod)
+	var t = 0;
+	var totalDuration = durs.reduce(function(e,i){return e + i}, 0);
+	var tdNormFN = tnorm(t, totalDuration);
+	var s = 0;
+	var end = t + totalDuration;
+	var durFNS = durs.map(function(e,i){
+		var x = tnorm(t + s, e)
+		s += e;
+		return x
+	})
+	var dp = 0;
+	var durpercent = durs.map(function(e, i){
+		var x = (e / totalDuration) + dp;
+		dp+= (e / totalDuration)
+		return x
+	})
+	var tn, n, i, v = 0, fn = 0;
+	var envelope = function(t){
+		tn = tdNormFN(t);
+		if(0 > tn || tn > 1) return 0;
+		fn = durpercent.reduce(function(p, e, i, d){return ((d[i-1] || 0) <= tn && tn <= e) ? i : p}, 0)
+		v = pts[fn](durFNS[fn](t))
+		return v
+	}
+	return envelope
+
+	// probably deletable
+	function xenvelope(t, sustain){
+		tn = tdNormFN(t); 
+		if(0 >= tn || tn  >= 1) return 0;
+		if(tn > durpercent[fn]) fn = (fn + 1 > pts.length - 1 ? 0 : fn + 1)
+		v = pts[fn](durFNS[fn](t))
+		return v
+	}
+}
+
+
+},{"./amod.js":7,"normalize-time":9}],9:[function(require,module,exports){
+module.exports = function(start, dur, min, max){
+
+	if(!min) min = 0;
+	if(!max) max = 1;
+	var end = start + dur;
+	var d = end - start;
+	var r = max - min;
+
+	return function(time){
+
+		x = min + (time - start) * r / d
+		if(x > 1){
+//			console.log('pre', time, end)
+			if(time < end) x = Number('.' + x.toString().split('.').join(''))
+//			console.log('norm', x)
+		}
+		return x
+	}
+
+}
+
+},{}],10:[function(require,module,exports){
+var emitter = require('events').EventEmitter
+
+module.exports = sync
+
+var $ = module.exports
+
+function sync(bpm, sampleRate){ // bpm, sampleRate, 
+
+	if(!(this instanceof sync)) return new sync(bpm, sampleRate)
+
+	this.bpm = bpm
+	this.beatsPerSecond = bpm / 60
+	this.sampleRate = sampleRate
+	this.spb = Math.round(sampleRate / this.beatsPerSecond)
+	this.s = 0
+	this.t = 0
+	this.index = []
+	this.beatIndex = new Array()
+  this.beatz = {}
+}
+
+$.prototype.clearAll = function(bpm, samplerate){
+	this.index = this.index.map(function(){return undefined})
+}
+
+$.prototype.tick = function(t, i){
+	++this.s
+//	if(!t) t = this.s / this.sampleRate
+//	var f = (this.s % this.spb) + 1;
+	for(var n = 0; n < this.index.length; n++ ){
+		if(this.index[n]) this.index[n](t, i, this.s)
+	}
+}
+
+$.prototype.off = function(i){
+	this.index.splice(i,1,undefined)
+}
+
+$.prototype._update = function(i, fn){
+	this.index.splice(i,1,fn)
+}
+
+$.prototype.update = function(id, beats, fn){
+  console.log(id, beats, fn)
+  if(typeof id === 'number') {
+    fn = beats
+    beats = id
+    id = Date.now().toString()
+  }
+  if(true){ // RiP
+    var i = Math.ceil(this.spb * beats);
+    console.log('test')
+    var self = this;
+    var delta = 0
+    var skipNext = false
+    var skip = false 
+    var beat = 0
+    function swing(beat){
+      delta = (Math.floor(self.spb * beat))
+      skipNext = beat === 0 ? false : true
+    }
+    if(!self.beatz[id]){
+      var l = this.index.length;
+      var off = function(){
+        self.off(l)
+      };
+      var emit = new emitter()
+      emit.on('stop', off)
+      this.beatz[id] = {
+        fn: fn,
+        beats: beats,
+        emitter: emit,
+        index: l
+      } 
+      var pushFn  = createPushFn(id, beat, fn, beats, off)
+      this.index.push(pushFn)
+      console.log(this.beatz[id])
+      return emit
+    } else{
+      // test if beat is changed
+      var b = this.beatz[id]
+      if(!(b.beats === beats)){
+        var psh = createPushFn(id, beat, fn, i, beats, off)  
+        self._update(b.index, psh)
+        return b.emitter
+      }
+      else{
+        b[id].fn = fn
+        return b.emitter
+      }
+    }
+    
+
+    function createPushFn(id, fn, i, beats, off){
+    
+      return (function(fn, i, beats, off){
+        return function(t, a, f){
+          if(f % (i + delta) === 0) {
+            if(skip){
+              skip = false
+              return
+            }
+            if(skipNext){
+              skipNext = false
+              skip = true
+              if(delta >= i) {
+                skip = false
+              }
+            }
+            self.beatz[id].fn(t, ++beat, off, swing)
+            //fn.apply(fn, [t, ++beat, off, swing])
+            emit.emit('beat', beat)
+          }
+        }
+      })(fn, i, beats, off)
+    }
+  }
+}
+
+$.prototype.on = function(beats, fn){
+	var i = Math.ceil(this.spb * beats);
+	var l = this.index.length;
+	var self = this;
+	var off = function(){
+    self.off(l)
+  };
+  var delta = 0
+  var skipNext = false
+  var skip = false 
+  function swing(beat){
+    delta = Math.abs(Math.floor(self.spb * beat))
+    skipNext = beat === 0 ? false : true
+  }
+  var emit = new emitter()
+  emit.on('stop', off)
+	this.index.push((function(b, fn, beats, off){
+    return function(t, a, f){
+      if(f % (i + delta) == 0) {
+        if(skip){
+          skip = false
+          return
+        }
+        if(skipNext){
+          skipNext = false
+          skip = true
+          if(delta >= i) {
+            skip = false
+          }
+        }
+        fn.apply(fn, [t, ++b, off, swing])
+        emit.emit('beat', b)
+      }
+    }
+  })(0, fn, beats, off))
+  return emit
+
+}
+
+function amilli(t){
+	return [Math.floor(t), (t % 1) * 1000]
+}
+
+},{"events":164}],11:[function(require,module,exports){
+var gus = require('jgauss')
+var oz = require('oscillators')
+
+var sqrtau = Math.sqrt(Math.PI * 2)
+var defs = {}
+defs.m = 1/12
+defs.f = 440
+defs.i = 8
+defs.wave = 'sine'
+
+module.exports = makeStrangles
+function makeStrangles(opts){
+
+  if(!opts) opts = {}
+ 
+  if(typeof opts == 'number'){
+    opts = {f: opts}
+  }
+
+  for(var i in defs){
+    if(!opts[i]) opts[i] = defs[i]
+  }
+
+  return new chimera(opts)
+	
+  function chimera(opts){
+    for(var i in opts) this[i] = opts[i]   
+    this.ring = function(t, u, s){
+      var x = 1, y = 0;
+      u = u || 0
+      s = s || 1
+      var i = 0
+      while(i <= opts.i){
+        y += oz[this.wave](t, this.f * x) * 
+             gus.general(x-1, u, s)
+        x *= this.m //Math.pow(2, this.m)
+        i++
+      }
+      return y
+    }
+  }
+
+}
+
+},{"jgauss":12,"oscillators":13}],12:[function(require,module,exports){
+arguments[4][5][0].apply(exports,arguments)
+},{"dup":5}],13:[function(require,module,exports){
+var OZ = module.exports
+var tau = Math.PI * 2
+
+OZ.sine = sine;
+OZ.saw = saw;
+OZ.saw_i = saw_i;
+OZ.triangle = triangle;
+OZ.square = square;
+OZ.sig = sig
+OZ.sq = square
+OZ.tri = triangle
+
+function sine(t, f) {
+
+    return Math.sin(t * tau * f);
+
+};
+
+function saw(t, f) {
+
+    var n = ((t % (1 / f)) * f) % 1; // n = [0 -> 1]
+
+    return -1 + (2 * n)
+
+};
+
+function saw_i(t, f) {
+
+    var n = ((t % (1 / f)) * f) % 1; // n = [0 -> 1]
+
+    return 1 - (2 * n)
+
+};
+
+function triangle(t, f) {
+
+    return Math.abs(1 - t % (1/f) * f * 2) * 2 - 1 
+
+};
+
+function square(t, f) {
+
+    return t * f % 1 < .5 ? 1 : -1 
+
+};
+
+function sig(t, f){
+  return 1 / (1 + Math.pow(Math.E, (t * Math.PI * 2 * f) % 12))
+}
+
+
+},{}],14:[function(require,module,exports){
+var datadelay = require('../sigdelay')
+
+module.exports = function(dist){
+
+  var delay = new datadelay(dist, Float32Array)
+
+  return function(sample, dist, fb, mix){
+    return delay.sample(sample, fb, mix)
+  } 
+
+}
+
+
+
+},{"../sigdelay":68}],15:[function(require,module,exports){
+module.exports = function (pts) {
+  return function (t) {
+    for (var a = pts; a.length > 1; a = b){
+      for (var i = 0, b = [], j; i < a.length - 1; i++){
+        for (b[i] = [], j = 1; j < a[i].length; j++){
+          b[i][j] = a[i][j] * (1 - t) + a[i+1][j] * t;
+        }
+      }
+    }
+    return a[0][1];
+	}    
+}
+
+
+
+},{}],16:[function(require,module,exports){
+var amod = require( './amod.js');
+var tnorm = require('normalize-time');
+var beezy = require('../beezy')
+
+module.exports = function(pts, durs){
+	pts = pts.map(beezy)
+	//pts = pts.map(amod)
+	var t = 0;
+	var totalDuration = durs.reduce(function(e,i){return e + i}, 0);
+	var tdNormFN = tnorm(t, totalDuration);
+	var s = 0;
+	var end = t + totalDuration;
+	var durFNS = durs.map(function(e,i){
+		var x = tnorm(t + s, e)
+		s += e;
+		return x
+	})
+	var dp = 0;
+	var durpercent = durs.map(function(e, i){
+		var x = (e / totalDuration) + dp;
+		dp+= (e / totalDuration)
+		return x
+	})
+	var tn, n, i, v = 0, fn = 0;
+	var envelope = function(t){
+		tn = tdNormFN(t);
+    if(tn < 0 || tn > 1) return 0
+		fn = durpercent.reduce(function(p, e, i, d){return ((d[i-1] || 0) <= tn && tn <= e) ? i : p}, 0)
+		v = pts[fn](durFNS[fn](t))[1]
+		return v
+	}
+	return envelope
+
+	// probably deletable
+	function xenvelope(t, sustain){
+		tn = tdNormFN(t); 
+		if(0 >= tn || tn  >= 1) return 0;
+		if(tn > durpercent[fn]) fn = (fn + 1 > pts.length - 1 ? 0 : fn + 1)
+		v = pts[fn](durFNS[fn](t))
+		return v
+	}
+}
+
+
+},{"../beezy":1,"./amod.js":15,"normalize-time":17}],17:[function(require,module,exports){
+arguments[4][9][0].apply(exports,arguments)
+},{"dup":9}],18:[function(require,module,exports){
+arguments[4][13][0].apply(exports,arguments)
+},{"dup":13}],19:[function(require,module,exports){
 var solver = require('beezy')
 var touchdown = require('touchdown')
 var findPos = require('./findPosition')
@@ -149,7 +860,7 @@ module.exports = function(p){
 
 
 
-},{"./findPosition":5,"beezy":7,"touchdown":10}],2:[function(require,module,exports){
+},{"./findPosition":23,"beezy":25,"touchdown":29}],20:[function(require,module,exports){
 (function (Buffer){
 var ui = require('./yindex')
 var insert = require('insert-css')
@@ -162,15 +873,43 @@ document.body.innerHTML = html;
 // thats mod element 
 var model = document.querySelector('.module')
 var st = ui({
-  gain: 
-    { type: 'dial', value: 1, name: 'gain', mag: 10, min:-1, max: 11, el: model.children[0] },
-  amod: 
-    { type: 'dial', value: 1/8, step: 1/8, mag: 1, el: model.children[1] }
+  time: 
+    { type: 'dial', value: 0, name: 'time', mag: 100, el: model.children[0] },
+  tempo : 
+    { type: 'dial', value: 72 / 60 * 4 / 5, name: 'tempo', mag: 1, el: model.children[1] },
+  delay: 
+    { type: 'dial', value: 4, name: 'delay', mag: 1, min: 1, max: Infinity, step: 1, el: model.children[2] }
 })
+
+let master = new AudioContext
+let jsynth = require('jsynth')
+$ = require('../polysynth/cheatcode')
+
+var iir = $.iir(2)
+
+let delay = $.jdelay(master.sampleRate * st.state.tempo / 4, .5, .5)
+
+jsynth(master, function(t){
+  t *= st.state.tempo
+  t += st.state.time
+  return delay(iir(sin(333 / 2 * wmod_(wmod_(12, 4, t, 1/32), wmod_(6, 2, t, 1/16), t, 1/4)) * amod(.5, .5, 1/4) / 4
+  + sin(wmod_(222 - 4, 4, t, 1/64) * wmod_(wmod_(6, 3, t, 1/3/2/2/2/2/2), wmod_(12, 4, t, 1/4/2/2/2/2), t, 1/6)) * amod(.2, .3, 1/12) / 4
+  + tri(333 + tri(amod_(amod(6, 1/2, 1/32/2/2/2/2/2/2/2/2), 2/2/2/2/2/2, t, 1/32/2/2/2/2/2/2))) * amod_(.5, .5, t * 3 / 2 , 1/4) * 2
+  + tri(111 + tri(amod_(amod(2, 1/6, 1/32/2/2/2/2/2/2/2/2), 1/64/2/2/2, t, 1/32/2/2/2/2/2/2))) * amod_(.5, .5, t * 3 / 2, 1/6) * 2), master.sampleRate * st.state.tempo * st.state.delay, 1/8, 1)
+
+  function tri (x) { return tri_(x,t) }
+  function tri_ (x,t) { return Math.abs(1 - t % (1/x) * x * 2) * 2 - 1 }
+
+  function amod_(c, r, t, f){ return c + r * ((Math.log((1.0001 + sin(f, t)) * 50) / Math.log(10))/2-2) }
+  function wmod_(c, r, t, f){ return c + Math.floor(r * ((Math.log((1.0001 + sin(f, t)) * 50) / Math.log(10))/2-2)) }
+  function amod(c, r, f){ return c + r * ((Math.log((1.0001 + sin(f)) * 50) / Math.log(10))/2-2) }
+  function sin (x) { return Math.sin(2 * Math.PI * t * x) }
+  function sin_ (x, t) { return Math.sin(2 * Math.PI * t * x) }
+}).connect(master.destination)
 
 
 }).call(this,require("buffer").Buffer)
-},{"./yindex":22,"buffer":79,"insert-css":8}],3:[function(require,module,exports){
+},{"../polysynth/cheatcode":44,"./yindex":41,"buffer":128,"insert-css":26,"jsynth":27}],21:[function(require,module,exports){
 var swtch = require('uxer/bpm')
 
 module.exports = function(p, cb){
@@ -209,7 +948,7 @@ function dot(d, c, bg, dis){
 
 }
 
-},{"uxer/bpm":15}],4:[function(require,module,exports){
+},{"uxer/bpm":34}],22:[function(require,module,exports){
 var swtch = require('uxer/switch')
 
 module.exports = function(p, cb){
@@ -247,7 +986,7 @@ function dot(d, c, bg, dis){
 
 }
 
-},{"uxer/switch":18}],5:[function(require,module,exports){
+},{"uxer/switch":37}],23:[function(require,module,exports){
 // fixed, from http://www.quirksmode.org/js/findpos.html
 
 module.exports = function(obj){
@@ -270,7 +1009,7 @@ module.exports = function(obj){
 
 }
 
-},{}],6:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 var spin = require('../uxer/spinx')
 
 module.exports = function(param, cb){
@@ -316,7 +1055,7 @@ function createKnob(){
 
 }
 
-},{"../uxer/spinx":32}],7:[function(require,module,exports){
+},{"../uxer/spinx":78}],25:[function(require,module,exports){
 module.exports = solver // takes a rayray of control points of n scale bezier curves
 
 function beezn(scale){
@@ -344,7 +1083,7 @@ function solver(curves){
   }
 }
 
-},{}],8:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 var containers = []; // will store container HTMLElement references
 var styleElements = []; // will store {prepend: HTMLElement, append: HTMLElement}
 
@@ -392,7 +1131,113 @@ function createStyleElement() {
     return styleElement;
 }
 
-},{}],9:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
+module.exports = function (context, fn, bufSize) {
+
+    if (typeof context === 'function') {
+      fn = context;
+      context = new webkitAudioContext() ;
+    }
+
+    if(!bufSize) bufSize = 4096;
+
+    var self = context.createScriptProcessor(bufSize, 1, 1);
+
+    self.fn = fn
+
+    var tt = 0.0
+    var ii = 0
+    const rate = context.sampleRate
+
+    self.i = self.t = 0
+
+    window._SAMPLERATE = self.sampleRate = self.rate = context.sampleRate;
+
+    self.duration = Infinity;
+
+    self.recording = false;
+
+    self.onaudioprocess = function(e){
+      var output = e.outputBuffer.getChannelData(0)
+      ,   input = e.inputBuffer.getChannelData(0);
+      self.tick(output, input);
+    };
+
+    self.tick = function (output, input) { // a fill-a-buffer function
+
+      for (var i = 0; i < output.length; i += 1) {
+
+          tt = ii / rate
+          ii = ii + 1
+          output[i] = self.fn(tt, ii, input[i]);
+
+      }
+
+      return output
+      
+    };
+
+    self.stop = function(){
+    
+      self.disconnect();
+
+      self.playing = false;
+
+      if(self.recording) {}
+    };
+
+    self.play = function(opts){
+
+      if (self.playing) return;
+
+      self.connect(self.context.destination);
+
+      self.playing = true;
+
+      return
+    
+    };
+
+    self.record = function(){
+
+    };
+
+    self.reset = function(){
+      self.i = self.t = 0
+    };
+
+    self.createSample = function(duration){
+      self.reset();
+      var buffer = self.context.createBuffer(1, duration, self.context.sampleRate)
+      var blob = buffer.getChannelData(0);
+      self.tick(blob);
+      return buffer
+    };
+
+    return self;
+};
+
+function mergeArgs (opts, args) {
+    Object.keys(opts || {}).forEach(function (key) {
+        args[key] = opts[key];
+    });
+
+    return Object.keys(args).reduce(function (acc, key) {
+        var dash = key.length === 1 ? '-' : '--';
+        return acc.concat(dash + key, args[key]);
+    }, []);
+}
+
+function signed (n) {
+    if (isNaN(n)) return 0;
+    var b = Math.pow(2, 15);
+    return n > 0
+        ? Math.min(b - 1, Math.floor((b * n) - 1))
+        : Math.max(-b, Math.ceil((b * n) - 1))
+    ;
+}
+
+},{}],28:[function(require,module,exports){
 (function (Buffer){
 //     uuid.js
 //
@@ -668,7 +1513,7 @@ function createStyleElement() {
 })('undefined' !== typeof window ? window : null);
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":79,"crypto":87}],10:[function(require,module,exports){
+},{"buffer":128,"crypto":136}],29:[function(require,module,exports){
 var touchy = require('./touchy.js')
 ,   uuid = require('node-uuid')
 ,   merge = require('utils-merge')
@@ -924,7 +1769,7 @@ touch.prototype.handleMouse = function(x){
 
 
 
-},{"./touchy.js":11,"node-uuid":9,"utils-merge":12}],11:[function(require,module,exports){
+},{"./touchy.js":30,"node-uuid":28,"utils-merge":31}],30:[function(require,module,exports){
 /* Modernizr 2.6.2 (Custom Build) | MIT & BSD
  * Build: http://modernizr.com/download/#-touch-teststyles-prefixes
  */
@@ -1667,7 +2512,7 @@ Touchy.startWindowBounce = function () {
 
 module.exports = Touchy;
 
-},{}],12:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 /**
  * Merge object b with object a.
  *
@@ -1692,7 +2537,7 @@ exports = module.exports = function(a, b){
   return a;
 };
 
-},{}],13:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 (function (global){
 
 var rng;
@@ -1727,7 +2572,7 @@ module.exports = rng;
 
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],14:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 //     uuid.js
 //
 //     Copyright (c) 2010-2012 Robert Kieffer
@@ -1912,7 +2757,7 @@ uuid.unparse = unparse;
 
 module.exports = uuid;
 
-},{"./rng":13}],15:[function(require,module,exports){
+},{"./rng":32}],34:[function(require,module,exports){
 var touch = require('touchdown')
 
 
@@ -1962,9 +2807,9 @@ module.exports = function(el, cb){
 
 }
 
-},{"touchdown":10}],16:[function(require,module,exports){
-arguments[4][5][0].apply(exports,arguments)
-},{"dup":5}],17:[function(require,module,exports){
+},{"touchdown":29}],35:[function(require,module,exports){
+arguments[4][23][0].apply(exports,arguments)
+},{"dup":23}],36:[function(require,module,exports){
 var touch = require('touchdown');
 
 module.exports = function(el, gate, cb){
@@ -1998,7 +2843,7 @@ module.exports = function(el, gate, cb){
 
 }
 
-},{"touchdown":10}],18:[function(require,module,exports){
+},{"touchdown":29}],37:[function(require,module,exports){
 var touch = require('touchdown');
 
 module.exports = function(el, gate, cb){
@@ -2031,7 +2876,7 @@ module.exports = function(el, gate, cb){
 
 }
 
-},{"touchdown":10}],19:[function(require,module,exports){
+},{"touchdown":29}],38:[function(require,module,exports){
 var touchdown = require('touchdown')
 var findPos = require('./findPosition')
 
@@ -2072,7 +2917,7 @@ module.exports = function(el, cb, point){
 
 }
 
-},{"./findPosition":16,"touchdown":10}],20:[function(require,module,exports){
+},{"./findPosition":35,"touchdown":29}],39:[function(require,module,exports){
 var swtch = require('uxer/shot')
 
 module.exports = function(p, cb){
@@ -2116,7 +2961,7 @@ function dot(d, c, bg, dis){
 
 }
 
-},{"uxer/shot":17}],21:[function(require,module,exports){
+},{"uxer/shot":36}],40:[function(require,module,exports){
 var xyify = require('uxer/xygrid')
 
 module.exports = function(p, cb){
@@ -2178,7 +3023,7 @@ function dot(){
   return d
 }
 
-},{"uxer/xygrid":19}],22:[function(require,module,exports){
+},{"uxer/xygrid":38}],41:[function(require,module,exports){
 var uuid = require('uuid').v4
 
 var knob = require('./knob')
@@ -2294,7 +3139,1809 @@ function conf(p, key){
   if(p.false === undefined) p.false =  false
 }
 
-},{"./amod":1,"./bpm":3,"./button":4,"./knob":6,"./shot":20,"./xy":21,"uuid":14}],23:[function(require,module,exports){
+},{"./amod":19,"./bpm":21,"./button":22,"./knob":24,"./shot":39,"./xy":40,"uuid":33}],42:[function(require,module,exports){
+var oz = require('oscillators')
+var waves = Object.keys(oz)
+var $ = exports
+const _p = 0
+waves.forEach(function(e){
+  $[e] = function(t, f, p){
+    var tt = 1 / f * p
+    return oz[e](t + tt, f)
+  }
+})
+
+
+},{"oscillators":43}],43:[function(require,module,exports){
+var OZ = module.exports
+var tau = Math.PI * 2
+
+OZ.sine = sine;
+OZ.saw = saw;
+OZ.saw_i = saw_i;
+OZ.triangle = triangle;
+OZ.triangle_s = triangle_s;
+OZ.square = square;
+OZ.sig = sig
+OZ.sq = square
+OZ.tri = triangle
+
+function sine(t, f) {
+
+    return Math.sin(t * tau * f);
+
+};
+
+function saw(t, f) {
+
+    var n = ((t % (1 / f)) * f) % 1; // n = [0 -> 1]
+
+    return -1 + (2 * n)
+
+};
+
+function saw_i(t, f) {
+
+    var n = ((t % (1 / f)) * f) % 1; // n = [0 -> 1]
+
+    return 1 - (2 * n)
+
+};
+
+function triangle(t, f) {
+
+    var n = ((t % (1 / f)) * f) % 1; // n = [0 -> 1]
+
+    return n < 0.5 ? -1 + (2 * (2 * n)) : 1 - (2 * (2 * n))
+
+};
+
+function triangle_s(t, f) {
+
+    var n = ((t % (1 / f)) * f) % 1; // n = [0 -> 1]
+
+    var s = Math.abs(Math.sin(t));
+
+    return n < s ? -1 + (2 * (2 * (n / s))) : 1 - (2 * (2 * (n / s)))
+
+};
+
+function square(t, f) {
+
+    return ((t % (1 / f)) * f) % 1 > 0.5 ? 1 : -1;
+
+};
+
+function sig(t, f){
+  return 1 / (1 + Math.pow(Math.E, (t * Math.PI * 2 * f) % 12))
+}
+
+
+},{}],44:[function(require,module,exports){
+var $ = exports
+$.westerns = require('../westerns')
+$.oz = require('../oscillators')
+$.ph = require('../phasers')
+$.amod = require('amod')
+$.env = require('../nvelope')
+$.jsync = require('jsynth-sync')
+$.zerone = require('../zerone')
+$.jdelay = require('jdelay')
+$.chrono = require('../jigger')
+$.meffisto = require('../meffisto')
+$.zerone = require('../zerone')
+$.beatmath = require('beatmath')
+$.teoria = require('teoria')
+$.gtone = require('../gtones')
+$.sigdelay = require('../new-deal')
+$.dataDelay = require('../data-delay')
+$.winfunk = require('../winfunk')
+$.fract = function(v){
+  return v - Math.floor(v)
+}
+$.quant = function(v, q){
+  return Math.floor(v/q)*q  
+}
+
+$.sigmoid = function(t){
+  return (1 / (1 + Math.pow(Math.E, -t))) * 2 - 1
+}
+$.sigmod = function(c, r, t, f){
+  return c + (r * $.sigmoid($.amod(6, 6, t * 2, f))) 
+}
+$.alog = function(c, r, t, f){ return c + r * ((Math.log((1.0001 + $.oz.sine(t, f)) * 50) / Math.log(10))/2-2) }
+$.iir = function(d, c){
+  d = d || 7
+  c = c || 2
+  var fb = 1
+  var delays = new Array(c)
+  delays = delays.map(function(e){
+    return new Array(d)
+  })
+  return function(s, f){
+    f = f ||  fb
+    return delays.reduce(function(aa, delay){
+      var sample = delay.reduce(function(a, e){ return a + (e * f)}, aa) / d 
+      delay.push(sample)
+      delay.shift()
+      return sample 
+    }, s) / d
+  }
+}
+
+
+},{"../data-delay":3,"../gtones":4,"../jigger":6,"../meffisto":11,"../new-deal":14,"../nvelope":16,"../oscillators":18,"../phasers":42,"../westerns":81,"../winfunk":82,"../zerone":83,"amod":45,"beatmath":47,"jdelay":48,"jsynth-sync":50,"teoria":51}],45:[function(require,module,exports){
+var oz = require('oscillators');
+
+module.exports = function(c, r, t, f){
+    return (c + (r * oz.sine(t, f)))
+};
+
+/*
+@center
+@radius
+@time
+@frequency
+*/
+
+},{"oscillators":46}],46:[function(require,module,exports){
+arguments[4][13][0].apply(exports,arguments)
+},{"dup":13}],47:[function(require,module,exports){
+module.exports = function(m, btz){
+  return function(beat){
+    var x = beat % m
+    if(x==0) x=m
+    var i = 0
+    var r = false
+    for(i; i < btz.length; i++){
+      if(btz[i] == x){
+        return x 
+      }
+    }
+    return r
+  }
+}
+
+},{}],48:[function(require,module,exports){
+var  funstance = require('funstance');
+
+module.exports = function(delay, feedback, mix, bufferSize){
+		
+  var delay = Math.floor(delay)
+
+  var feedback = feedback
+
+  var mix = mix
+
+  var bufferSize = bufferSize || delay * 2;
+
+  if(bufferSize < delay * 2) bufferSize = delay * 2
+
+  var d = new Delay(delay, feedback, mix, bufferSize)
+
+  var fn = funstance(d, Sample)
+
+  return fn
+
+  function Delay(delay, feedback, mix, bufferSize){
+			
+	  this.feedback = feedback;
+	
+	  this.mix = mix;
+	
+	  this.delay = delay;
+
+	  this.buffer = new Float32Array(bufferSize);
+	
+	  this.writeOffset = 0;
+
+	  this.endPoint = (this.delay * 2)
+		
+	  this.readOffset = this.delay + 1
+
+          this.readZero = 0;
+	
+ 	};
+
+
+  function Sample(sample, _delay, feedback, mix){
+
+      var s = sample;
+
+      if(feedback) this.feedback = feedback;
+
+      if(mix) this.mix = mix;
+
+      if(_delay && _delay !== this.delay){
+
+        _delay = Math.max(0, Math.floor(_delay));
+	  
+        if(_delay * 2 > this.buffer.length) {
+
+          var nb = new Float32Array(_delay*2);
+
+          nb.set(this.buffer, 0);
+
+          this.buffer = nb		
+
+        }
+
+//	  if(_delay > this.delay) this.readZero = _delay - this.delay;
+	  
+	  this.delay = _delay;
+	  
+	  this.endPoint = (this.delay * 2);
+
+      }
+      
+    if (this.readOffset >= this.endPoint) this.readOffset = 0;
+
+    s = this.buffer[this.readOffset];
+    
+    //sample += s
+
+    var write = sample + ( s * this.feedback );
+
+    this.buffer[this.writeOffset] = write
+
+    this.writeOffset++;
+
+    this.readOffset++;
+
+    if (this.writeOffset >= this.endPoint) this.writeOffset = 0;
+
+    return (sample + s) * this.mix//isNaN(sample) ? Math.random() : sample
+
+  };
+
+};
+
+},{"funstance":49}],49:[function(require,module,exports){
+module.exports = function (obj, fn) {
+    var f = function () {
+        if (typeof fn !== 'function') return;
+        return fn.apply(obj, arguments);
+    };
+    
+    function C () {}
+    C.prototype = Object.getPrototypeOf(obj);
+    f.__proto__ = new C;
+    
+    Object.getOwnPropertyNames(Function.prototype).forEach(function (key) {
+        if (f[key] === undefined) {
+            f.__proto__[key] = Function.prototype[key];
+        }
+    });
+    
+    Object.getOwnPropertyNames(obj).forEach(function (key) {
+        f[key] = obj[key];
+    });
+    
+    return f;
+};
+
+},{}],50:[function(require,module,exports){
+var emitter = require('events').EventEmitter
+
+module.exports = sync
+
+var $ = module.exports
+
+function sync(bpm, sampleRate){ // bpm, sampleRate, 
+
+	if(!(this instanceof sync)) return new sync(bpm, sampleRate)
+
+	this.bpm = bpm
+	this.beatsPerSecond = bpm / 60
+	this.sampleRate = sampleRate
+	this.spb = Math.round(sampleRate / this.beatsPerSecond)
+	this.s = 0
+	this.t = 0
+	this.index = []
+	this.beatIndex = new Array()
+}
+
+$.prototype.clearAll = function(bpm, samplerate){
+	this.index = this.index.map(function(){return undefined})
+}
+
+$.prototype.tick = function(t, i){
+	++this.s
+//	if(!t) t = this.s / this.sampleRate
+//	var f = (this.s % this.spb) + 1;
+	for(var n = 0; n < this.index.length; n++ ){
+		if(this.index[n]) this.index[n](t, i, this.s)
+	}
+}
+
+$.prototype.off = function(i){
+	this.index.splice(i,1,undefined)
+}
+
+$.prototype.on = function(beats, fn){
+	var i = Math.ceil(this.spb * beats);
+	var l = this.index.length;
+	var self = this;
+	var off = function(){
+    self.off(l)
+  };
+  var delta = 0
+  var skipNext = false
+  var skip = false 
+  function swing(beat){
+    delta = Math.abs(Math.floor(self.spb * beat))
+    skipNext = beat === 0 ? false : true
+  }
+  var emit = new emitter()
+  emit.on('stop', off)
+	this.index.push((function(b, fn, beats, off){
+    return function(t, a, f){
+      if(f % (i + delta) == 0) {
+        if(skip){
+          skip = false
+          return
+        }
+        if(skipNext){
+          skipNext = false
+          skip = true
+          if(delta >= i) {
+            skip = false
+          }
+        }
+        fn.apply(fn, [t, ++b, off, swing])
+        emit.emit('beat', b)
+      }
+    }
+  })(0, fn, beats, off))
+  return emit
+
+}
+
+function amilli(t){
+	return [Math.floor(t), (t % 1) * 1000]
+}
+
+},{"events":164}],51:[function(require,module,exports){
+var Note = require('./lib/note');
+var Interval = require('./lib/interval');
+var Chord = require('./lib/chord');
+var Scale = require('./lib/scale');
+
+// never thought I would write this, but: Legacy support
+function intervalConstructor(from, to) {
+  // Construct a Interval object from string representation
+  if (typeof from === 'string')
+    return Interval.toCoord(from);
+
+  if (typeof to === 'string' && from instanceof Note)
+    return Interval.from(from, Interval.toCoord(to));
+
+  if (to instanceof Interval && from instanceof Note)
+    return Interval.from(from, to);
+
+  if (to instanceof Note && from instanceof Note)
+    return Interval.between(from, to);
+
+  throw new Error('Invalid parameters');
+}
+
+intervalConstructor.toCoord = Interval.toCoord;
+intervalConstructor.from = Interval.from;
+intervalConstructor.between = Interval.between;
+intervalConstructor.invert = Interval.invert;
+
+function noteConstructor(name, duration) {
+  if (typeof name === 'string')
+    return Note.fromString(name, duration);
+  else
+    return new Note(name, duration);
+}
+
+noteConstructor.fromString = Note.fromString;
+noteConstructor.fromKey = Note.fromKey;
+noteConstructor.fromFrequency = Note.fromFrequency;
+noteConstructor.fromMIDI = Note.fromMIDI;
+
+function chordConstructor(name, symbol) {
+  if (typeof name === 'string') {
+    var root, octave;
+    root = name.match(/^([a-h])(x|#|bb|b?)/i);
+    if (root && root[0]) {
+      octave = typeof symbol === 'number' ? symbol.toString(10) : '4';
+      return new Chord(Note.fromString(root[0].toLowerCase() + octave),
+                            name.substr(root[0].length));
+    }
+  } else if (name instanceof Note)
+    return new Chord(name, symbol);
+
+  throw new Error('Invalid Chord. Couldn\'t find note name');
+}
+
+function scaleConstructor(tonic, scale) {
+  tonic = (tonic instanceof Note) ? tonic : teoria.note(tonic);
+  return new Scale(tonic, scale);
+}
+
+var teoria = {
+  note: noteConstructor,
+
+  chord: chordConstructor,
+
+  interval: intervalConstructor,
+
+  scale: scaleConstructor,
+
+  Note: Note,
+  Chord: Chord,
+  Scale: Scale,
+  Interval: Interval
+};
+
+require('./lib/sugar')(teoria);
+exports = module.exports = teoria;
+
+},{"./lib/chord":52,"./lib/interval":53,"./lib/note":55,"./lib/scale":56,"./lib/sugar":57}],52:[function(require,module,exports){
+var daccord = require('daccord');
+var knowledge = require('./knowledge');
+var Note = require('./note');
+var Interval = require('./interval');
+
+function Chord(root, name) {
+  if (!(this instanceof Chord)) return new Chord(root, name);
+  name = name || '';
+  this.name = root.name().toUpperCase() + root.accidental() + name;
+  this.symbol = name;
+  this.root = root;
+  this.intervals = [];
+  this._voicing = [];
+
+  var bass = name.split('/');
+  if (bass.length === 2 && bass[1].trim() !== '9') {
+    name = bass[0];
+    bass = bass[1].trim();
+  } else {
+    bass = null;
+  }
+
+  this.intervals = daccord(name).map(Interval.toCoord)
+  this._voicing = this.intervals.slice();
+
+  if (bass) {
+    var intervals = this.intervals, bassInterval, note;
+    // Make sure the bass is atop of the root note
+    note = Note.fromString(bass + (root.octave() + 1)); // crude
+
+    bassInterval = Interval.between(root, note);
+    bass = bassInterval.simple();
+    bassInterval = bassInterval.invert().direction('down');
+
+    this._voicing = [bassInterval];
+    for (var i = 0, length = intervals.length;  i < length; i++) {
+      if (!intervals[i].simple().equal(bass))
+        this._voicing.push(intervals[i]);
+    }
+  }
+}
+
+Chord.prototype = {
+  notes: function() {
+    var root = this.root;
+    return this.voicing().map(function(interval) {
+      return root.interval(interval);
+    });
+  },
+
+  simple: function() {
+    return this.notes().map(function(n) { return n.toString(true); });
+  },
+
+  bass: function() {
+    return this.root.interval(this._voicing[0]);
+  },
+
+  voicing: function(voicing) {
+    // Get the voicing
+    if (!voicing) {
+      return this._voicing;
+    }
+
+    // Set the voicing
+    this._voicing = [];
+    for (var i = 0, length = voicing.length; i < length; i++) {
+      this._voicing[i] = Interval.toCoord(voicing[i]);
+    }
+
+    return this;
+  },
+
+  resetVoicing: function() {
+    this._voicing = this.intervals;
+  },
+
+  dominant: function(additional) {
+    additional = additional || '';
+    return new Chord(this.root.interval('P5'), additional);
+  },
+
+  subdominant: function(additional) {
+    additional = additional || '';
+    return new Chord(this.root.interval('P4'), additional);
+  },
+
+  parallel: function(additional) {
+    additional = additional || '';
+    var quality = this.quality();
+
+    if (this.chordType() !== 'triad' || quality === 'diminished' ||
+        quality === 'augmented') {
+      throw new Error('Only major/minor triads have parallel chords');
+    }
+
+    if (quality === 'major') {
+      return new Chord(this.root.interval('m3', 'down'), 'm');
+    } else {
+      return new Chord(this.root.interval('m3', 'up'));
+    }
+  },
+
+  quality: function() {
+    var third, fifth, seventh, intervals = this.intervals;
+
+    for (var i = 0, length = intervals.length; i < length; i++) {
+      if (intervals[i].number() === 3) {
+        third = intervals[i];
+      } else if (intervals[i].number() === 5) {
+        fifth = intervals[i];
+      } else if (intervals[i].number() === 7) {
+        seventh = intervals[i];
+      }
+    }
+
+    if (!third) {
+      return;
+    }
+
+    third = (third.direction() === 'down') ? third.invert() : third;
+    third = third.simple().toString();
+
+    if (fifth) {
+      fifth = (fifth.direction === 'down') ? fifth.invert() : fifth;
+      fifth = fifth.simple().toString();
+    }
+
+    if (seventh) {
+      seventh = (seventh.direction === 'down') ? seventh.invert() : seventh;
+      seventh = seventh.simple().toString();
+    }
+
+    if (third === 'M3') {
+      if (fifth === 'A5') {
+        return 'augmented';
+      } else if (fifth === 'P5') {
+        return (seventh === 'm7') ? 'dominant' : 'major';
+      }
+
+      return 'major';
+    } else if (third === 'm3') {
+      if (fifth === 'P5') {
+        return 'minor';
+      } else if (fifth === 'd5') {
+        return (seventh === 'm7') ? 'half-diminished' : 'diminished';
+      }
+
+      return 'minor';
+    }
+  },
+
+  chordType: function() { // In need of better name
+    var length = this.intervals.length, interval, has, invert, i, name;
+
+    if (length === 2) {
+      return 'dyad';
+    } else if (length === 3) {
+      has = {first: false, third: false, fifth: false};
+      for (i = 0; i < length; i++) {
+        interval = this.intervals[i];
+        invert = interval.invert();
+        if (interval.base() in has) {
+          has[interval.base()] = true;
+        } else if (invert.base() in has) {
+          has[invert.base()] = true;
+        }
+      }
+
+      name = (has.first && has.third && has.fifth) ? 'triad' : 'trichord';
+    } else if (length === 4) {
+      has = {first: false, third: false, fifth: false, seventh: false};
+      for (i = 0; i < length; i++) {
+        interval = this.intervals[i];
+        invert = interval.invert();
+        if (interval.base() in has) {
+          has[interval.base()] = true;
+        } else if (invert.base() in has) {
+          has[invert.base()] = true;
+        }
+      }
+
+      if (has.first && has.third && has.fifth && has.seventh) {
+        name = 'tetrad';
+      }
+    }
+
+    return name || 'unknown';
+  },
+
+  get: function(interval) {
+    if (typeof interval === 'string' && interval in knowledge.stepNumber) {
+      var intervals = this.intervals, i, length;
+
+      interval = knowledge.stepNumber[interval];
+      for (i = 0, length = intervals.length; i < length; i++) {
+        if (intervals[i].number() === interval) {
+          return this.root.interval(intervals[i]);
+        }
+      }
+
+      return null;
+    } else {
+      throw new Error('Invalid interval name');
+    }
+  },
+
+  interval: function(interval) {
+    return new Chord(this.root.interval(interval), this.symbol);
+  },
+
+  transpose: function(interval) {
+    this.root.transpose(interval);
+    this.name = this.root.name().toUpperCase() +
+                this.root.accidental() + this.symbol;
+
+    return this;
+  },
+
+  toString: function() {
+    return this.name;
+  }
+};
+
+module.exports = Chord;
+
+},{"./interval":53,"./knowledge":54,"./note":55,"daccord":59}],53:[function(require,module,exports){
+var knowledge = require('./knowledge');
+var vector = require('./vector');
+var toCoord = require('interval-coords');
+
+function Interval(coord) {
+  if (!(this instanceof Interval)) return new Interval(coord);
+  this.coord = coord;
+}
+
+Interval.prototype = {
+  name: function() {
+    return knowledge.intervalsIndex[this.number() - 1];
+  },
+
+  semitones: function() {
+    return vector.sum(vector.mul(this.coord, [12, 7]));
+  },
+
+  number: function() {
+    return Math.abs(this.value());
+  },
+
+  value: function() {
+    var without = vector.sub(this.coord,
+      vector.mul(knowledge.sharp, Math.floor((this.coord[1] - 2) / 7) + 1))
+      , i, val;
+
+    i = knowledge.intervalFromFifth[without[1] + 5];
+    val = knowledge.stepNumber[i] + (without[0] - knowledge.intervals[i][0]) * 7;
+
+    return (val > 0) ? val : val - 2;
+  },
+
+  type: function() {
+    return knowledge.intervals[this.base()][0] <= 1 ? 'perfect' : 'minor';
+  },
+
+  base: function() {
+    var fifth = vector.sub(this.coord, vector.mul(knowledge.sharp, this.qualityValue()))[1], name;
+    fifth = this.value() > 0 ? fifth + 5 : -(fifth - 5) % 7;
+    fifth = fifth < 0 ? knowledge.intervalFromFifth.length + fifth : fifth;
+
+    name = knowledge.intervalFromFifth[fifth];
+    if (name === 'unison' && this.number() >= 8)
+      name = 'octave';
+
+    return name;
+  },
+
+  direction: function(dir) {
+    if (dir) {
+      var is = this.value() >= 1 ? 'up' : 'down';
+      if (is !== dir)
+        this.coord = vector.mul(this.coord, -1);
+
+      return this;
+    }
+    else
+      return this.value() >= 1 ? 'up' : 'down';
+  },
+
+  simple: function(ignore) {
+    // Get the (upwards) base interval (with quality)
+    var simple = knowledge.intervals[this.base()];
+    simple = vector.add(simple, vector.mul(knowledge.sharp, this.qualityValue()));
+
+    // Turn it around if necessary
+    if (!ignore)
+      simple = this.direction() === 'down' ? vector.mul(simple, -1) : simple;
+
+    return new Interval(simple);
+  },
+
+  isCompound: function() {
+    return this.number() > 8;
+  },
+
+  octaves: function() {
+    var without, octaves;
+
+    if (this.direction() === 'up') {
+      without = vector.sub(this.coord, vector.mul(knowledge.sharp, this.qualityValue()));
+      octaves = without[0] - knowledge.intervals[this.base()][0];
+    } else {
+      without = vector.sub(this.coord, vector.mul(knowledge.sharp, -this.qualityValue()));
+      octaves = -(without[0] + knowledge.intervals[this.base()][0]);
+    }
+
+    return octaves;
+  },
+
+  invert: function() {
+    var i = this.base();
+    var qual = this.qualityValue();
+    var acc = this.type() === 'minor' ? -(qual - 1) : -qual;
+    var coord = knowledge.intervals[knowledge.intervalsIndex[9 - knowledge.stepNumber[i] - 1]];
+    coord = vector.add(coord, vector.mul(knowledge.sharp, acc));
+
+    return new Interval(coord);
+  },
+
+  quality: function(lng) {
+    var quality = knowledge.alterations[this.type()][this.qualityValue() + 2];
+
+    return lng ? knowledge.qualityLong[quality] : quality;
+  },
+
+  qualityValue: function() {
+    if (this.direction() === 'down')
+      return Math.floor((-this.coord[1] - 2) / 7) + 1;
+    else
+      return Math.floor((this.coord[1] - 2) / 7) + 1;
+  },
+
+  equal: function(interval) {
+      return this.coord[0] === interval.coord[0] &&
+          this.coord[1] === interval.coord[1];
+  },
+
+  greater: function(interval) {
+    var semi = this.semitones();
+    var isemi = interval.semitones();
+
+    // If equal in absolute size, measure which interval is bigger
+    // For example P4 is bigger than A3
+    return (semi === isemi) ?
+      (this.number() > interval.number()) : (semi > isemi);
+  },
+
+  smaller: function(interval) {
+    return !this.equal(interval) && !this.greater(interval);
+  },
+
+  add: function(interval) {
+    return new Interval(vector.add(this.coord, interval.coord));
+  },
+
+  toString: function(ignore) {
+    // If given true, return the positive value
+    var number = ignore ? this.number() : this.value();
+
+    return this.quality() + number;
+  }
+}
+
+Interval.toCoord = function(simple) {
+  var coord = toCoord(simple);
+  if (!coord)
+    throw new Error('Invalid simple format interval');
+
+  return new Interval(coord);
+}
+
+Interval.from = function(from, to) {
+  return from.interval(to);
+}
+
+Interval.between = function(from, to) {
+  return new Interval(vector.sub(to.coord, from.coord));
+}
+
+Interval.invert = function(sInterval) {
+  return Interval.toCoord(sInterval).invert().toString();
+}
+
+module.exports = Interval;
+
+},{"./knowledge":54,"./vector":58,"interval-coords":63}],54:[function(require,module,exports){
+// Note coordinates [octave, fifth] relative to C
+module.exports = {
+  notes: {
+    c: [0, 0],
+    d: [-1, 2],
+    e: [-2, 4],
+    f: [1, -1],
+    g: [0, 1],
+    a: [-1, 3],
+    b: [-2, 5],
+    h: [-2, 5]
+  },
+
+  intervals: {
+    unison: [0, 0],
+    second: [3, -5],
+    third: [2, -3],
+    fourth: [1, -1],
+    fifth: [0, 1],
+    sixth: [3, -4],
+    seventh: [2, -2],
+    octave: [1, 0]
+  },
+
+  intervalFromFifth: ['second', 'sixth', 'third', 'seventh', 'fourth',
+                         'unison', 'fifth'],
+
+  intervalsIndex: ['unison', 'second', 'third', 'fourth', 'fifth',
+                      'sixth', 'seventh', 'octave', 'ninth', 'tenth',
+                      'eleventh', 'twelfth', 'thirteenth', 'fourteenth',
+                      'fifteenth'],
+
+// linaer index to fifth = (2 * index + 1) % 7
+  fifths: ['f', 'c', 'g', 'd', 'a', 'e', 'b'],
+  accidentals: ['bb', 'b', '', '#', 'x'],
+
+  sharp: [-4, 7],
+  A4: [3, 3],
+
+  durations: {
+    '0.25': 'longa',
+    '0.5': 'breve',
+    '1': 'whole',
+    '2': 'half',
+    '4': 'quarter',
+    '8': 'eighth',
+    '16': 'sixteenth',
+    '32': 'thirty-second',
+    '64': 'sixty-fourth',
+    '128': 'hundred-twenty-eighth'
+  },
+
+  qualityLong: {
+    P: 'perfect',
+    M: 'major',
+    m: 'minor',
+    A: 'augmented',
+    AA: 'doubly augmented',
+    d: 'diminished',
+    dd: 'doubly diminished'
+  },
+
+  alterations: {
+    perfect: ['dd', 'd', 'P', 'A', 'AA'],
+    minor: ['dd', 'd', 'm', 'M', 'A', 'AA']
+  },
+
+  symbols: {
+    'min': ['m3', 'P5'],
+    'm': ['m3', 'P5'],
+    '-': ['m3', 'P5'],
+
+    'M': ['M3', 'P5'],
+    '': ['M3', 'P5'],
+
+    '+': ['M3', 'A5'],
+    'aug': ['M3', 'A5'],
+
+    'dim': ['m3', 'd5'],
+    'o': ['m3', 'd5'],
+
+    'maj': ['M3', 'P5', 'M7'],
+    'dom': ['M3', 'P5', 'm7'],
+    'ø': ['m3', 'd5', 'm7'],
+
+    '5': ['P5']
+  },
+
+  chordShort: {
+    'major': 'M',
+    'minor': 'm',
+    'augmented': 'aug',
+    'diminished': 'dim',
+    'half-diminished': '7b5',
+    'power': '5',
+    'dominant': '7'
+  },
+
+  stepNumber: {
+    'unison': 1,
+    'first': 1,
+    'second': 2,
+    'third': 3,
+    'fourth': 4,
+    'fifth': 5,
+    'sixth': 6,
+    'seventh': 7,
+    'octave': 8,
+    'ninth': 9,
+    'eleventh': 11,
+    'thirteenth': 13
+  },
+
+  // Adjusted Shearer syllables - Chromatic solfege system
+  // Some intervals are not provided for. These include:
+  // dd2 - Doubly diminished second
+  // dd3 - Doubly diminished third
+  // AA3 - Doubly augmented third
+  // dd6 - Doubly diminished sixth
+  // dd7 - Doubly diminished seventh
+  // AA7 - Doubly augmented seventh
+  intervalSolfege: {
+    'dd1': 'daw',
+    'd1': 'de',
+    'P1': 'do',
+    'A1': 'di',
+    'AA1': 'dai',
+    'd2': 'raw',
+    'm2': 'ra',
+    'M2': 're',
+    'A2': 'ri',
+    'AA2': 'rai',
+    'd3': 'maw',
+    'm3': 'me',
+    'M3': 'mi',
+    'A3': 'mai',
+    'dd4': 'faw',
+    'd4': 'fe',
+    'P4': 'fa',
+    'A4': 'fi',
+    'AA4': 'fai',
+    'dd5': 'saw',
+    'd5': 'se',
+    'P5': 'so',
+    'A5': 'si',
+    'AA5': 'sai',
+    'd6': 'law',
+    'm6': 'le',
+    'M6': 'la',
+    'A6': 'li',
+    'AA6': 'lai',
+    'd7': 'taw',
+    'm7': 'te',
+    'M7': 'ti',
+    'A7': 'tai',
+    'dd8': 'daw',
+    'd8': 'de',
+    'P8': 'do',
+    'A8': 'di',
+    'AA8': 'dai'
+  }
+}
+
+},{}],55:[function(require,module,exports){
+var scientific = require('scientific-notation');
+var helmholtz = require('helmholtz');
+var pitchFq = require('pitch-fq');
+var knowledge = require('./knowledge');
+var vector = require('./vector');
+var Interval = require('./interval');
+
+function pad(str, ch, len) {
+  for (; len > 0; len--) {
+    str += ch;
+  }
+
+  return str;
+}
+
+
+function Note(coord, duration) {
+  if (!(this instanceof Note)) return new Note(coord, duration);
+  duration = duration || {};
+
+  this.duration = { value: duration.value || 4, dots: duration.dots || 0 };
+  this.coord = coord;
+}
+
+Note.prototype = {
+  octave: function() {
+    return this.coord[0] + knowledge.A4[0] - knowledge.notes[this.name()][0] +
+      this.accidentalValue() * 4;
+  },
+
+  name: function() {
+    return knowledge.fifths[this.coord[1] + knowledge.A4[1] - this.accidentalValue() * 7 + 1];
+  },
+
+  accidentalValue: function() {
+    return Math.round((this.coord[1] + knowledge.A4[1] - 2) / 7);
+  },
+
+  accidental: function() {
+    return knowledge.accidentals[this.accidentalValue() + 2];
+  },
+
+  /**
+   * Returns the key number of the note
+   */
+  key: function(white) {
+    if (white)
+      return this.coord[0] * 7 + this.coord[1] * 4 + 29;
+    else
+      return this.coord[0] * 12 + this.coord[1] * 7 + 49;
+  },
+
+  /**
+  * Returns a number ranging from 0-127 representing a MIDI note value
+  */
+  midi: function() {
+    return this.key() + 20;
+  },
+
+  /**
+   * Calculates and returns the frequency of the note.
+   * Optional concert pitch (def. 440)
+   */
+  fq: function(concertPitch) {
+    return pitchFq(this.coord, concertPitch)
+  },
+
+  /**
+   * Returns the pitch class index (chroma) of the note
+   */
+  chroma: function() {
+    var value = (vector.sum(vector.mul(this.coord, [12, 7])) - 3) % 12;
+
+    return (value < 0) ? value + 12 : value;
+  },
+
+  interval: function(interval) {
+    if (typeof interval === 'string') interval = Interval.toCoord(interval);
+
+    if (interval instanceof Interval)
+      return new Note(vector.add(this.coord, interval.coord));
+    else if (interval instanceof Note)
+      return new Interval(vector.sub(interval.coord, this.coord));
+  },
+
+  transpose: function(interval) {
+    this.coord = vector.add(this.coord, interval.coord);
+    return this;
+  },
+
+  /**
+   * Returns the Helmholtz notation form of the note (fx C,, d' F# g#'')
+   */
+  helmholtz: function() {
+    var octave = this.octave();
+    var name = this.name();
+    name = octave < 3 ? name.toUpperCase() : name.toLowerCase();
+    var padchar = octave < 3 ? ',' : '\'';
+    var padcount = octave < 2 ? 2 - octave : octave - 3;
+
+    return pad(name + this.accidental(), padchar, padcount);
+  },
+
+  /**
+   * Returns the scientific notation form of the note (fx E4, Bb3, C#7 etc.)
+   */
+  scientific: function() {
+    return this.name().toUpperCase() + this.accidental() + this.octave();
+  },
+
+  /**
+   * Returns notes that are enharmonic with this note.
+   */
+  enharmonics: function(oneaccidental) {
+    var key = this.key(), limit = oneaccidental ? 2 : 3;
+
+    return ['m3', 'm2', 'm-2', 'm-3']
+      .map(this.interval.bind(this))
+      .filter(function(note) {
+      var acc = note.accidentalValue();
+      var diff = key - (note.key() - acc);
+
+      if (diff < limit && diff > -limit) {
+        note.coord = vector.add(note.coord, vector.mul(knowledge.sharp, diff - acc));
+        return true;
+      }
+    });
+  },
+
+  solfege: function(scale, showOctaves) {
+    var interval = scale.tonic.interval(this), solfege, stroke, count;
+    if (interval.direction() === 'down')
+      interval = interval.invert();
+
+    if (showOctaves) {
+      count = (this.key(true) - scale.tonic.key(true)) / 7;
+      count = (count >= 0) ? Math.floor(count) : -(Math.ceil(-count));
+      stroke = (count >= 0) ? '\'' : ',';
+    }
+
+    solfege = knowledge.intervalSolfege[interval.simple(true).toString()];
+    return (showOctaves) ? pad(solfege, stroke, Math.abs(count)) : solfege;
+  },
+
+  scaleDegree: function(scale) {
+    var inter = scale.tonic.interval(this);
+
+    // If the direction is down, or we're dealing with an octave - invert it
+    if (inter.direction() === 'down' ||
+       (inter.coord[1] === 0 && inter.coord[0] !== 0)) {
+      inter = inter.invert();
+    }
+
+    inter = inter.simple(true).coord;
+
+    return scale.scale.reduce(function(index, current, i) {
+      var coord = Interval.toCoord(current).coord;
+      return coord[0] === inter[0] && coord[1] === inter[1] ? i + 1 : index;
+    }, 0);
+  },
+
+  /**
+   * Returns the name of the duration value,
+   * such as 'whole', 'quarter', 'sixteenth' etc.
+   */
+  durationName: function() {
+    return knowledge.durations[this.duration.value];
+  },
+
+  /**
+   * Returns the duration of the note (including dots)
+   * in seconds. The first argument is the tempo in beats
+   * per minute, the second is the beat unit (i.e. the
+   * lower numeral in a time signature).
+   */
+  durationInSeconds: function(bpm, beatUnit) {
+    var secs = (60 / bpm) / (this.duration.value / 4) / (beatUnit / 4);
+    return secs * 2 - secs / Math.pow(2, this.duration.dots);
+  },
+
+  /**
+   * Returns the name of the note, with an optional display of octave number
+   */
+  toString: function(dont) {
+    return this.name() + this.accidental() + (dont ? '' : this.octave());
+  }
+};
+
+Note.fromString = function(name, dur) {
+  var coord = scientific(name);
+  if (!coord) coord = helmholtz(name);
+  return new Note(coord, dur);
+}
+
+Note.fromKey = function(key) {
+  var octave = Math.floor((key - 4) / 12);
+  var distance = key - (octave * 12) - 4;
+  var name = knowledge.fifths[(2 * Math.round(distance / 2) + 1) % 7];
+  var note = vector.add(vector.sub(knowledge.notes[name], knowledge.A4), [octave + 1, 0]);
+  var diff = (key - 49) - vector.sum(vector.mul(note, [12, 7]));
+
+  return new Note(diff ? vector.add(note, vector.mul(knowledge.sharp, diff)) : note);
+}
+
+Note.fromFrequency = function(fq, concertPitch) {
+  var key, cents, originalFq;
+  concertPitch = concertPitch || 440;
+
+  key = 49 + 12 * ((Math.log(fq) - Math.log(concertPitch)) / Math.log(2));
+  key = Math.round(key);
+  originalFq = concertPitch * Math.pow(2, (key - 49) / 12);
+  cents = 1200 * (Math.log(fq / originalFq) / Math.log(2));
+
+  return { note: Note.fromKey(key), cents: cents };
+}
+
+Note.fromMIDI = function(note) {
+  return Note.fromKey(note - 20);
+}
+
+module.exports = Note;
+
+},{"./interval":53,"./knowledge":54,"./vector":58,"helmholtz":60,"pitch-fq":64,"scientific-notation":65}],56:[function(require,module,exports){
+var knowledge = require('./knowledge');
+var Interval = require('./interval');
+
+var scales = {
+  aeolian: ['P1', 'M2', 'm3', 'P4', 'P5', 'm6', 'm7'],
+  blues: ['P1', 'm3', 'P4', 'd5', 'P5', 'm7'],
+  chromatic: ['P1', 'm2', 'M2', 'm3', 'M3', 'P4', 'A4', 'P5', 'm6', 'M6', 'm7', 'M7'],
+  dorian: ['P1', 'M2', 'm3', 'P4', 'P5', 'M6', 'm7'],
+  doubleharmonic: ['P1', 'm2', 'M3', 'P4', 'P5', 'm6', 'M7'],
+  harmonicminor: ['P1', 'M2', 'm3', 'P4', 'P5', 'm6', 'M7'],
+  ionian: ['P1', 'M2', 'M3', 'P4', 'P5', 'M6', 'M7'],
+  locrian: ['P1', 'm2', 'm3', 'P4', 'd5', 'm6', 'm7'],
+  lydian: ['P1', 'M2', 'M3', 'A4', 'P5', 'M6', 'M7'],
+  majorpentatonic: ['P1', 'M2', 'M3', 'P5', 'M6'],
+  melodicminor: ['P1', 'M2', 'm3', 'P4', 'P5', 'M6', 'M7'],
+  minorpentatonic: ['P1', 'm3', 'P4', 'P5', 'm7'],
+  mixolydian: ['P1', 'M2', 'M3', 'P4', 'P5', 'M6', 'm7'],
+  phrygian: ['P1', 'm2', 'm3', 'P4', 'P5', 'm6', 'm7'],
+  wholetone: ['P1', 'M2', 'M3', 'A4', 'A5', 'A6']
+};
+
+// synonyms
+scales.harmonicchromatic = scales.chromatic;
+scales.minor = scales.aeolian;
+scales.major = scales.ionian;
+scales.flamenco = scales.doubleharmonic;
+
+function Scale(tonic, scale) {
+  if (!(this instanceof Scale)) return new Scale(tonic, scale);
+  var scaleName, i;
+  if (!('coord' in tonic)) {
+    throw new Error('Invalid Tonic');
+  }
+
+  if (typeof scale === 'string') {
+    scaleName = scale;
+    scale = scales[scale];
+    if (!scale)
+      throw new Error('Invalid Scale');
+  } else {
+    for (i in scales) {
+      if (scales.hasOwnProperty(i)) {
+        if (scales[i].toString() === scale.toString()) {
+          scaleName = i;
+          break;
+        }
+      }
+    }
+  }
+
+  this.name = scaleName;
+  this.tonic = tonic;
+  this.scale = scale;
+}
+
+Scale.prototype = {
+  notes: function() {
+    var notes = [];
+
+    for (var i = 0, length = this.scale.length; i < length; i++) {
+      notes.push(this.tonic.interval(this.scale[i]));
+    }
+
+    return notes;
+  },
+
+  simple: function() {
+    return this.notes().map(function(n) { return n.toString(true); });
+  },
+
+  type: function() {
+    var length = this.scale.length - 2;
+    if (length < 8) {
+      return ['di', 'tri', 'tetra', 'penta', 'hexa', 'hepta', 'octa'][length] +
+        'tonic';
+    }
+  },
+
+  get: function(i) {
+    i = (typeof i === 'string' && i in knowledge.stepNumber) ? knowledge.stepNumber[i] : i;
+
+    return this.tonic.interval(this.scale[i - 1]);
+  },
+
+  solfege: function(index, showOctaves) {
+    if (index)
+      return this.get(index).solfege(this, showOctaves);
+
+    return this.notes().map(function(n) {
+      return n.solfege(this, showOctaves);
+    });
+  },
+
+  interval: function(interval) {
+    interval = (typeof interval === 'string') ?
+      Interval.toCoord(interval) : interval;
+    return new Scale(this.tonic.interval(interval), this.scale);
+  },
+
+  transpose: function(interval) {
+    var scale = this.interval(interval);
+    this.scale = scale.scale;
+    this.tonic = scale.tonic;
+
+    return this;
+  }
+};
+Scale.KNOWN_SCALES = Object.keys(scales);
+
+module.exports = Scale;
+
+},{"./interval":53,"./knowledge":54}],57:[function(require,module,exports){
+var knowledge = require('./knowledge');
+
+module.exports = function(teoria) {
+  var Note = teoria.Note;
+  var Chord = teoria.Chord;
+  var Scale = teoria.Scale;
+
+  Note.prototype.chord = function(chord) {
+    chord = (chord in knowledge.chordShort) ? knowledge.chordShort[chord] : chord;
+
+    return new Chord(this, chord);
+  }
+
+  Note.prototype.scale = function(scale) {
+    return new Scale(this, scale);
+  }
+}
+
+},{"./knowledge":54}],58:[function(require,module,exports){
+module.exports = {
+  add: function(note, interval) {
+    return [note[0] + interval[0], note[1] + interval[1]];
+  },
+
+  sub: function(note, interval) {
+    return [note[0] - interval[0], note[1] - interval[1]];
+  },
+
+  mul: function(note, interval) {
+    if (typeof interval === 'number')
+      return [note[0] * interval, note[1] * interval];
+    else
+      return [note[0] * interval[0], note[1] * interval[1]];
+  },
+
+  sum: function(coord) {
+    return coord[0] + coord[1];
+  }
+}
+
+},{}],59:[function(require,module,exports){
+var SYMBOLS = {
+  'm': ['m3', 'P5'],
+  'mi': ['m3', 'P5'],
+  'min': ['m3', 'P5'],
+  '-': ['m3', 'P5'],
+
+  'M': ['M3', 'P5'],
+  'ma': ['M3', 'P5'],
+  '': ['M3', 'P5'],
+
+  '+': ['M3', 'A5'],
+  'aug': ['M3', 'A5'],
+
+  'dim': ['m3', 'd5'],
+  'o': ['m3', 'd5'],
+
+  'maj': ['M3', 'P5', 'M7'],
+  'dom': ['M3', 'P5', 'm7'],
+  'ø': ['m3', 'd5', 'm7'],
+
+  '5': ['P5'],
+
+  '6/9': ['M3', 'P5', 'M6', 'M9']
+};
+
+module.exports = function(symbol) {
+  var c, parsing = 'quality', additionals = [], name, chordLength = 2
+  var notes = ['P1', 'M3', 'P5', 'm7', 'M9', 'P11', 'M13'];
+  var explicitMajor = false;
+
+  function setChord(name) {
+    var intervals = SYMBOLS[name];
+    for (var i = 0, len = intervals.length; i < len; i++) {
+      notes[i + 1] = intervals[i];
+    }
+
+    chordLength = intervals.length;
+  }
+
+  // Remove whitespace, commas and parentheses
+  symbol = symbol.replace(/[,\s\(\)]/g, '');
+  for (var i = 0, len = symbol.length; i < len; i++) {
+    if (!(c = symbol[i]))
+      return;
+
+    if (parsing === 'quality') {
+      var sub3 = (i + 2) < len ? symbol.substr(i, 3).toLowerCase() : null;
+      var sub2 = (i + 1) < len ? symbol.substr(i, 2).toLowerCase() : null;
+      if (sub3 in SYMBOLS)
+        name = sub3;
+      else if (sub2 in SYMBOLS)
+        name = sub2;
+      else if (c in SYMBOLS)
+        name = c;
+      else
+        name = '';
+
+      if (name)
+        setChord(name);
+
+      if (name === 'M' || name === 'ma' || name === 'maj')
+        explicitMajor = true;
+
+
+      i += name.length - 1;
+      parsing = 'extension';
+    } else if (parsing === 'extension') {
+      c = (c === '1' && symbol[i + 1]) ? +symbol.substr(i, 2) : +c;
+
+      if (!isNaN(c) && c !== 6) {
+        chordLength = (c - 1) / 2;
+
+        if (chordLength !== Math.round(chordLength))
+          return new Error('Invalid interval extension: ' + c.toString(10));
+
+        if (name === 'o' || name === 'dim')
+          notes[3] = 'd7';
+        else if (explicitMajor)
+          notes[3] = 'M7';
+
+        i += c >= 10 ? 1 : 0;
+      } else if (c === 6) {
+        notes[3] = 'M6';
+        chordLength = Math.max(3, chordLength);
+      } else
+        i -= 1;
+
+      parsing = 'alterations';
+    } else if (parsing === 'alterations') {
+      var alterations = symbol.substr(i).split(/(#|b|add|maj|sus|M)/i),
+          next, flat = false, sharp = false;
+
+      if (alterations.length === 1)
+        return new Error('Invalid alteration');
+      else if (alterations[0].length !== 0)
+        return new Error('Invalid token: \'' + alterations[0] + '\'');
+
+      var ignore = false;
+      alterations.forEach(function(alt, i, arr) {
+        if (ignore || !alt.length)
+          return ignore = false;
+
+        var next = arr[i + 1], lower = alt.toLowerCase();
+        if (alt === 'M' || lower === 'maj') {
+          if (next === '7')
+            ignore = true;
+
+          chordLength = Math.max(3, chordLength);
+          notes[3] = 'M7';
+        } else if (lower === 'sus') {
+          var type = 'P4';
+          if (next === '2' || next === '4') {
+            ignore = true;
+
+            if (next === '2')
+              type = 'M2';
+          }
+
+          notes[1] = type; // Replace third with M2 or P4
+        } else if (lower === 'add') {
+          if (next === '9')
+            additionals.push('M9');
+          else if (next === '11')
+            additionals.push('P11');
+          else if (next === '13')
+            additionals.push('M13');
+
+          ignore = true
+        } else if (lower === 'b') {
+          flat = true;
+        } else if (lower === '#') {
+          sharp = true;
+        } else {
+          var token = +alt, quality, intPos;
+          if (isNaN(token) || String(token).length !== alt.length)
+            return new Error('Invalid token: \'' + alt + '\'');
+
+          if (token === 6) {
+            if (sharp)
+              notes[3] = 'A6';
+            else if (flat)
+              notes[3] = 'm6';
+            else
+              notes[3] = 'M6';
+
+            chordLength = Math.max(3, chordLength);
+            return;
+          }
+
+          // Calculate the position in the 'note' array
+          intPos = (token - 1) / 2;
+          if (chordLength < intPos)
+            chordLength = intPos;
+
+          if (token < 5 || token === 7 || intPos !== Math.round(intPos))
+            return new Error('Invalid interval alteration: ' + token);
+
+          quality = notes[intPos][0];
+
+          // Alterate the quality of the interval according the accidentals
+          if (sharp) {
+            if (quality === 'd')
+              quality = 'm';
+            else if (quality === 'm')
+              quality = 'M';
+            else if (quality === 'M' || quality === 'P')
+              quality = 'A';
+          } else if (flat) {
+            if (quality === 'A')
+              quality = 'M';
+            else if (quality === 'M')
+              quality = 'm';
+            else if (quality === 'm' || quality === 'P')
+              quality = 'd';
+          }
+
+          sharp = flat = false;
+          notes[intPos] = quality + token;
+        }
+      });
+      parsing = 'ended';
+    } else if (parsing === 'ended') {
+      break;
+    }
+  }
+
+  return notes.slice(0, chordLength + 1).concat(additionals);
+}
+
+},{}],60:[function(require,module,exports){
+var coords = require('notecoord');
+var accval = require('accidental-value');
+
+module.exports = function helmholtz(name) {
+  var name = name.replace(/\u2032/g, "'").replace(/\u0375/g, ',');
+  var parts = name.match(/^(,*)([a-h])(x|#|bb|b?)([,\']*)$/i);
+
+  if (!parts || name !== parts[0])
+    throw new Error('Invalid formatting');
+
+  var note = parts[2];
+  var octaveFirst = parts[1];
+  var octaveLast = parts[4];
+  var lower = note === note.toLowerCase();
+  var octave;
+
+  if (octaveFirst) {
+    if (lower)
+      throw new Error('Invalid formatting - found commas before lowercase note');
+
+    octave = 2 - octaveFirst.length;
+  } else if (octaveLast) {
+    if (octaveLast.match(/^'+$/) && lower)
+      octave = 3 + octaveLast.length;
+    else if (octaveLast.match(/^,+$/) && !lower)
+      octave = 2 - octaveLast.length;
+    else
+      throw new Error('Invalid formatting - mismatch between octave ' +
+        'indicator and letter case')
+  } else
+    octave = lower ? 3 : 2;
+
+  var accidentalValue = accval.interval(parts[3].toLowerCase());
+  var coord = coords(note.toLowerCase());
+
+  coord[0] += octave;
+  coord[0] += accidentalValue[0] - coords.A4[0];
+  coord[1] += accidentalValue[1] - coords.A4[1];
+
+  return coord;
+};
+
+},{"accidental-value":61,"notecoord":62}],61:[function(require,module,exports){
+var accidentalValues = {
+  'bb': -2,
+  'b': -1,
+  '': 0,
+  '#': 1,
+  'x': 2
+};
+
+module.exports = function accidentalNumber(acc) {
+  return accidentalValues[acc];
+}
+
+module.exports.interval = function accidentalInterval(acc) {
+  var val = accidentalValues[acc];
+  return [-4 * val, 7 * val];
+}
+
+},{}],62:[function(require,module,exports){
+// First coord is octaves, second is fifths. Distances are relative to c
+var notes = {
+  c: [0, 0],
+  d: [-1, 2],
+  e: [-2, 4],
+  f: [1, -1],
+  g: [0, 1],
+  a: [-1, 3],
+  b: [-2, 5],
+  h: [-2, 5]
+};
+
+module.exports = function(name) {
+  return name in notes ? [notes[name][0], notes[name][1]] : null;
+};
+
+module.exports.notes = notes;
+module.exports.A4 = [3, 3]; // Relative to C0 (scientic notation, ~16.35Hz)
+module.exports.sharp = [-4, 7];
+
+},{}],63:[function(require,module,exports){
+var pattern = /^(AA|A|P|M|m|d|dd)(-?\d+)$/;
+
+// The interval it takes to raise a note a semitone
+var sharp = [-4, 7];
+
+var pAlts = ['dd', 'd', 'P', 'A', 'AA'];
+var mAlts = ['dd', 'd', 'm', 'M', 'A', 'AA'];
+
+var baseIntervals = [
+  [0, 0],
+  [3, -5],
+  [2, -3],
+  [1, -1],
+  [0, 1],
+  [3, -4],
+  [2, -2],
+  [1, 0]
+];
+
+module.exports = function(simple) {
+  var parser = simple.match(pattern);
+  if (!parser) return null;
+
+  var quality = parser[1];
+  var number = +parser[2];
+  var sign = number < 0 ? -1 : 1;
+
+  number = sign < 0 ? -number : number;
+
+  var lower = number > 8 ? (number % 7 || 7) : number;
+  var octaves = (number - lower) / 7;
+
+  var base = baseIntervals[lower - 1];
+  var alts = base[0] <= 1 ? pAlts : mAlts;
+  var alt = alts.indexOf(quality) - 2;
+
+  // this happens, if the alteration wasn't suitable for this type
+  // of interval, such as P2 or M5 (no "perfect second" or "major fifth")
+  if (alt === -3) return null;
+
+  return [
+    sign * (base[0] + octaves + sharp[0] * alt),
+    sign * (base[1] + sharp[1] * alt)
+  ];
+}
+
+// Copy to avoid overwriting internal base intervals
+module.exports.coords = baseIntervals.slice(0);
+
+},{}],64:[function(require,module,exports){
+module.exports = function(coord, stdPitch) {
+  if (typeof coord === 'number') {
+    stdPitch = coord;
+    return function(coord) {
+      return stdPitch * Math.pow(2, (coord[0] * 12 + coord[1] * 7) / 12);
+    }
+  }
+
+  stdPitch = stdPitch || 440;
+  return stdPitch * Math.pow(2, (coord[0] * 12 + coord[1] * 7) / 12);
+}
+
+},{}],65:[function(require,module,exports){
+var coords = require('notecoord');
+var accval = require('accidental-value');
+
+module.exports = function scientific(name) {
+  var format = /^([a-h])(x|#|bb|b?)(-?\d*)/i;
+
+  var parser = name.match(format);
+  if (!(parser && name === parser[0] && parser[3].length)) return;
+
+  var noteName = parser[1];
+  var octave = +parser[3];
+  var accidental = parser[2].length ? parser[2].toLowerCase() : '';
+
+  var accidentalValue = accval.interval(accidental);
+  var coord = coords(noteName.toLowerCase());
+
+  coord[0] += octave;
+  coord[0] += accidentalValue[0] - coords.A4[0];
+  coord[1] += accidentalValue[1] - coords.A4[1];
+
+  return coord;
+};
+
+},{"accidental-value":66,"notecoord":67}],66:[function(require,module,exports){
+arguments[4][61][0].apply(exports,arguments)
+},{"dup":61}],67:[function(require,module,exports){
+arguments[4][62][0].apply(exports,arguments)
+},{"dup":62}],68:[function(require,module,exports){
+module.exports = pixecho
+
+function sigmoid (t){
+  return (1 / (1 + Math.pow(Math.E, -t))) * 2 - 1
+}
+
+function pixecho(delay, ArrayType, reverse){
+  if(!(this instanceof pixecho)) return new pixecho(delay, ArrayType, reverse);
+  console.log(delay)
+  this.buffer = new ArrayType(delay * 2);
+  this.endpoint = delay * 2 - 1
+  this.writeOffset = 0
+  this.readOffset = reverse ? delay * 2 - 1: delay - 1;
+  this.delay = delay
+  this.type = ArrayType
+  return this
+}
+
+pixecho.prototype.read = function(){
+  if(this.readOffset === this.endpoint) this.readOffset = 0
+  return this.buffer[this.readOffset++] 
+}
+
+pixecho.prototype.write = function(x){
+  if(this.writeOffset === this.endpoint) this.writeOffset = 0;
+  this.buffer[this.writeOffset++] = x
+}
+
+pixecho.prototype.reverseRead = function(){
+  if(this.readOffset ===  0) this.readOffset = this.endpoint
+  return this.buffer[this.readOffset--] 
+}
+
+pixecho.prototype.reverseWrite = function(x){
+  if(this.writeOffset === 0) this.writeOffset = this.endpoint
+  return this.buffer[this.writeOffset--] = x
+}
+
+pixecho.prototype.setDelay = function(x){
+  var r = x / this.delay
+  var buf = new this.type(x * 2)
+  buf.set(this.buffer)
+  this.buffer = buf
+}
+
+pixecho.prototype.sample = function(s, fb, m){
+  var x = this.read()
+  this.write(sigmoid((x * fb) + s) / 2)
+  return x * m + s
+}
+
+pixecho.prototype.reverseSample = function(s, fb, m){
+  var x = this.read()
+  this.reverseWrite(sigmoid((x * fb) + s) / 2)
+  return x * m + s
+}
+
+pixecho.prototype.setInterval = function(x){
+
+  this.readOffset += x
+}
+
+},{}],69:[function(require,module,exports){
 (function (Buffer){
 //     uuid.js
 //
@@ -2543,13 +5190,13 @@ function conf(p, key){
 }).call(this);
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":79,"crypto":87}],24:[function(require,module,exports){
-arguments[4][12][0].apply(exports,arguments)
-},{"dup":12}],25:[function(require,module,exports){
-arguments[4][10][0].apply(exports,arguments)
-},{"./touchy.js":26,"dup":10,"node-uuid":23,"utils-merge":24}],26:[function(require,module,exports){
-arguments[4][11][0].apply(exports,arguments)
-},{"dup":11}],27:[function(require,module,exports){
+},{"buffer":128,"crypto":136}],70:[function(require,module,exports){
+arguments[4][31][0].apply(exports,arguments)
+},{"dup":31}],71:[function(require,module,exports){
+arguments[4][29][0].apply(exports,arguments)
+},{"./touchy.js":72,"dup":29,"node-uuid":69,"utils-merge":70}],72:[function(require,module,exports){
+arguments[4][30][0].apply(exports,arguments)
+},{"dup":30}],73:[function(require,module,exports){
 module.exports = function(el, param){
     var propValue = window.getComputedStyle(el).getPropertyValue(param)
 		return propValue;
@@ -2726,11 +5373,11 @@ function CSSGetPrimitiveValue(value) {
 		}
 };
 
-},{}],28:[function(require,module,exports){
-arguments[4][23][0].apply(exports,arguments)
-},{"buffer":79,"crypto":87,"dup":23}],29:[function(require,module,exports){
-arguments[4][12][0].apply(exports,arguments)
-},{"dup":12}],30:[function(require,module,exports){
+},{}],74:[function(require,module,exports){
+arguments[4][69][0].apply(exports,arguments)
+},{"buffer":128,"crypto":136,"dup":69}],75:[function(require,module,exports){
+arguments[4][31][0].apply(exports,arguments)
+},{"dup":31}],76:[function(require,module,exports){
 var touchy = require('./touchy.js')
 ,   uuid = require('node-uuid')
 ,   merge = require('utils-merge')
@@ -2985,9 +5632,9 @@ touch.prototype.handleMouse = function(x){
 
 
 
-},{"./touchy.js":31,"node-uuid":28,"utils-merge":29}],31:[function(require,module,exports){
-arguments[4][11][0].apply(exports,arguments)
-},{"dup":11}],32:[function(require,module,exports){
+},{"./touchy.js":77,"node-uuid":74,"utils-merge":75}],77:[function(require,module,exports){
+arguments[4][30][0].apply(exports,arguments)
+},{"dup":30}],78:[function(require,module,exports){
 var touchdown = require('../touchdown')
 var _switch = require('./switch')
 var getCSS = require('./getCSS')
@@ -3041,9 +5688,9 @@ module.exports = function(el, cb){
 
 }
 
-},{"../touchdown":25,"./getCSS":27,"./switch":33,"./trig":34}],33:[function(require,module,exports){
-arguments[4][18][0].apply(exports,arguments)
-},{"dup":18,"touchdown":30}],34:[function(require,module,exports){
+},{"../touchdown":71,"./getCSS":73,"./switch":79,"./trig":80}],79:[function(require,module,exports){
+arguments[4][37][0].apply(exports,arguments)
+},{"dup":37,"touchdown":76}],80:[function(require,module,exports){
 module.exports = {
   distance: function ( point1, point2 ) {
     var dx = point2[0] - point1[0];
@@ -3057,7 +5704,158 @@ module.exports = {
   }
 }
 
-},{}],35:[function(require,module,exports){
+},{}],81:[function(require,module,exports){
+//  in semitones
+
+var $ = module.exports
+
+$.ionian = [0,2,4,5,7,9,11]
+$.dorian = [0,2,3,5,7,9,10]
+$.phrygian = [0,1,3,5,7,8,10]
+$.lydian = [0,2,4,6,7,9,11]
+$.mixolydian = [0,2,4,5,7,9,10]
+$.aeolian = [0,2,3,5,7,8,10]
+$.locrian = [0,1,3,5,6,8,10]
+$.majorpentatonic = [0,2,5,7,9]
+$.minorpentatonic = [0,3,5,7,10]
+$.chromatic = [0,1,2,3,4,5,6,7,8,9,10,11] 
+
+$.modes = Object.keys($)
+
+// only dealing with frequencies
+$.upscale = function(root, scale, distance, denom){
+  if(typeof scale === 'string') scale = $[scale.toLowerCase()]
+  var l = scale.length
+  denom = denom || 12
+  var notes = new Array(distance)
+  var oct = 0
+  for(var x = 0; x < distance; x++){
+    var interval = scale[x % l] 
+    if(x>=l && interval === 0) oct += 12
+    notes[x] = root * Math.pow(2, (oct + interval)/denom)
+  }
+  return notes
+}
+
+$.downscale = function(root, scale, distance, denom){
+  if(typeof scale === 'string') scale = $[scale.toLowerCase()]
+  var l = scale.length
+  denom = denom || 12
+  var notes = new Array(distance)
+  var div = 2
+  for(var x = 0; x < distance; x++){
+    var interval = scale[x % l] 
+    if(x>=l && interval === 0) root/=2
+    notes[x] = (root/2) * Math.pow(2, (denom - interval)/denom)
+  }
+  return notes
+  return new Array(distance).map(function(e, i){
+    var interval = scale[i % l]
+    (root/2) * Math.pow((denom - interval)/denom)
+  })
+}
+
+
+},{}],82:[function(require,module,exports){
+module.exports.hamming = hamming 
+module.exports.hann = hann 
+module.exports.welch = welch 
+module.exports.tri = tri 
+module.exports.planckt = planckt
+
+function planckt(t, fq, x){
+  fq = 1 / fq 
+  t = t % fq
+  return t / fq < x / 2 ? 1 : 1 / (Math.exp(2 * x * (1 / (1 - (((2*t)/(fq-1) -1) + 1 / 1 - 2 * x - (((2*t)/(fq-1) -1)))))) + 1)
+}
+
+function tri(t, fq, n){
+  fq = 1/fq
+  t = t % fq
+  n = n || 0
+  n = fq + (n || 0)
+  return 1 - Math.abs( ( t - ( fq / 2 ) ) / ( n / 2 ) )
+}
+
+function hamming(t, fq){
+  return .54 - .46 * Math.cos((2 * Math.PI * (t % (1 / fq))) / (1 / fq))
+}
+
+function hann(t, fq){
+  return .5 * (1 - Math.cos((2 * Math.PI * (t % (1 / fq))) / ((1 / fq))))
+}
+
+function welch(t, fq){
+  fq = 1 / fq
+  t = t % fq
+  return 1 - Math.pow( (t-(fq/2)) / (fq/2), 2)
+}
+
+},{}],83:[function(require,module,exports){
+var sync = require('../jsynth-sync')
+
+module.exports = function(bpm, sampleRate){
+  var Timer = sync(bpm, sampleRate)
+  Timer.beat = beat
+  return Timer
+  
+  function beat (interval, rayray, fn){
+    var swag = 0
+    var swinger = function(x){swag = x}
+    var master = undefined
+
+    return eys(interval, rayray, fn)
+
+    function eys (interval, rayray, fn){
+      var y = rayray.length
+      
+
+      var timer = Timer.on(interval, function(time, beat, xxx, swing){
+        if(rayray === master.rayray){
+          master.beat = beat
+          master.stop = xxx
+          master.ended = false
+          //console.log('master beat %d', beat)
+        }
+        else{
+          //console.log('submaster beat %d', beat, rayray)
+        }
+        swing(swag)
+        var i = rayray[(beat-1)%y]
+        if(i){
+          if(Array.isArray(i)){
+            var yn = i.length
+            var intervaln = interval / yn
+             var _timer = eys(intervaln, i, fn)// interval is bug?
+            _timer._l = i.length
+            _timer.on('end', function(){
+              master.timer.emit('stop')
+            })
+            _timer.on('beat', function(b){
+              if(b === _timer._l) _timer.emit('stop') 
+            })
+          }
+          else{
+            fn(time, master.beat, xxx, swinger, beat)
+          }
+        }
+        else{
+          return
+        }
+      })
+      if(!master){
+        master = {rayray: rayray, beat: 0}
+        master.timer = timer
+      }
+      timer.on('end', function(){
+        timer.emit('stop')
+      })
+      return timer
+    }
+  }
+}
+
+},{"../jsynth-sync":10}],84:[function(require,module,exports){
 var asn1 = exports;
 
 asn1.bignum = require('bn.js');
@@ -3068,7 +5866,7 @@ asn1.constants = require('./asn1/constants');
 asn1.decoders = require('./asn1/decoders');
 asn1.encoders = require('./asn1/encoders');
 
-},{"./asn1/api":36,"./asn1/base":38,"./asn1/constants":42,"./asn1/decoders":44,"./asn1/encoders":47,"bn.js":50}],36:[function(require,module,exports){
+},{"./asn1/api":85,"./asn1/base":87,"./asn1/constants":91,"./asn1/decoders":93,"./asn1/encoders":96,"bn.js":99}],85:[function(require,module,exports){
 var asn1 = require('../asn1');
 var inherits = require('inherits');
 
@@ -3131,7 +5929,7 @@ Entity.prototype.encode = function encode(data, enc, /* internal */ reporter) {
   return this._getEncoder(enc).encode(data, reporter);
 };
 
-},{"../asn1":35,"inherits":125,"vm":168}],37:[function(require,module,exports){
+},{"../asn1":84,"inherits":174,"vm":217}],86:[function(require,module,exports){
 var inherits = require('inherits');
 var Reporter = require('../base').Reporter;
 var Buffer = require('buffer').Buffer;
@@ -3249,7 +6047,7 @@ EncoderBuffer.prototype.join = function join(out, offset) {
   return out;
 };
 
-},{"../base":38,"buffer":79,"inherits":125}],38:[function(require,module,exports){
+},{"../base":87,"buffer":128,"inherits":174}],87:[function(require,module,exports){
 var base = exports;
 
 base.Reporter = require('./reporter').Reporter;
@@ -3257,7 +6055,7 @@ base.DecoderBuffer = require('./buffer').DecoderBuffer;
 base.EncoderBuffer = require('./buffer').EncoderBuffer;
 base.Node = require('./node');
 
-},{"./buffer":37,"./node":39,"./reporter":40}],39:[function(require,module,exports){
+},{"./buffer":86,"./node":88,"./reporter":89}],88:[function(require,module,exports){
 var Reporter = require('../base').Reporter;
 var EncoderBuffer = require('../base').EncoderBuffer;
 var DecoderBuffer = require('../base').DecoderBuffer;
@@ -3888,7 +6686,7 @@ Node.prototype._isPrintstr = function isPrintstr(str) {
   return /^[A-Za-z0-9 '\(\)\+,\-\.\/:=\?]*$/.test(str);
 };
 
-},{"../base":38,"minimalistic-assert":129}],40:[function(require,module,exports){
+},{"../base":87,"minimalistic-assert":178}],89:[function(require,module,exports){
 var inherits = require('inherits');
 
 function Reporter(options) {
@@ -4011,7 +6809,7 @@ ReporterError.prototype.rethrow = function rethrow(msg) {
   return this;
 };
 
-},{"inherits":125}],41:[function(require,module,exports){
+},{"inherits":174}],90:[function(require,module,exports){
 var constants = require('../constants');
 
 exports.tagClass = {
@@ -4055,7 +6853,7 @@ exports.tag = {
 };
 exports.tagByName = constants._reverse(exports.tag);
 
-},{"../constants":42}],42:[function(require,module,exports){
+},{"../constants":91}],91:[function(require,module,exports){
 var constants = exports;
 
 // Helper
@@ -4076,7 +6874,7 @@ constants._reverse = function reverse(map) {
 
 constants.der = require('./der');
 
-},{"./der":41}],43:[function(require,module,exports){
+},{"./der":90}],92:[function(require,module,exports){
 var inherits = require('inherits');
 
 var asn1 = require('../../asn1');
@@ -4400,13 +7198,13 @@ function derDecodeLen(buf, primitive, fail) {
   return len;
 }
 
-},{"../../asn1":35,"inherits":125}],44:[function(require,module,exports){
+},{"../../asn1":84,"inherits":174}],93:[function(require,module,exports){
 var decoders = exports;
 
 decoders.der = require('./der');
 decoders.pem = require('./pem');
 
-},{"./der":43,"./pem":45}],45:[function(require,module,exports){
+},{"./der":92,"./pem":94}],94:[function(require,module,exports){
 var inherits = require('inherits');
 var Buffer = require('buffer').Buffer;
 
@@ -4457,7 +7255,7 @@ PEMDecoder.prototype.decode = function decode(data, options) {
   return DERDecoder.prototype.decode.call(this, input, options);
 };
 
-},{"./der":43,"buffer":79,"inherits":125}],46:[function(require,module,exports){
+},{"./der":92,"buffer":128,"inherits":174}],95:[function(require,module,exports){
 var inherits = require('inherits');
 var Buffer = require('buffer').Buffer;
 
@@ -4752,13 +7550,13 @@ function encodeTag(tag, primitive, cls, reporter) {
   return res;
 }
 
-},{"../../asn1":35,"buffer":79,"inherits":125}],47:[function(require,module,exports){
+},{"../../asn1":84,"buffer":128,"inherits":174}],96:[function(require,module,exports){
 var encoders = exports;
 
 encoders.der = require('./der');
 encoders.pem = require('./pem');
 
-},{"./der":46,"./pem":48}],48:[function(require,module,exports){
+},{"./der":95,"./pem":97}],97:[function(require,module,exports){
 var inherits = require('inherits');
 
 var DEREncoder = require('./der');
@@ -4781,7 +7579,7 @@ PEMEncoder.prototype.encode = function encode(data, options) {
   return out.join('\n');
 };
 
-},{"./der":46,"inherits":125}],49:[function(require,module,exports){
+},{"./der":95,"inherits":174}],98:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -4897,7 +7695,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],50:[function(require,module,exports){
+},{}],99:[function(require,module,exports){
 (function (module, exports) {
   'use strict';
 
@@ -8326,7 +11124,7 @@ function fromByteArray (uint8) {
   };
 })(typeof module === 'undefined' || module, this);
 
-},{}],51:[function(require,module,exports){
+},{}],100:[function(require,module,exports){
 var r;
 
 module.exports = function rand(len) {
@@ -8385,9 +11183,9 @@ if (typeof window === 'object') {
   }
 }
 
-},{"crypto":52}],52:[function(require,module,exports){
+},{"crypto":101}],101:[function(require,module,exports){
 
-},{}],53:[function(require,module,exports){
+},{}],102:[function(require,module,exports){
 (function (Buffer){
 // based on the aes implimentation in triple sec
 // https://github.com/keybase/triplesec
@@ -8568,7 +11366,7 @@ AES.prototype._doCryptBlock = function (M, keySchedule, SUB_MIX, SBOX) {
 exports.AES = AES
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":79}],54:[function(require,module,exports){
+},{"buffer":128}],103:[function(require,module,exports){
 (function (Buffer){
 var aes = require('./aes')
 var Transform = require('cipher-base')
@@ -8669,7 +11467,7 @@ function xorTest (a, b) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"./aes":53,"./ghash":58,"buffer":79,"buffer-xor":78,"cipher-base":80,"inherits":125}],55:[function(require,module,exports){
+},{"./aes":102,"./ghash":107,"buffer":128,"buffer-xor":127,"cipher-base":129,"inherits":174}],104:[function(require,module,exports){
 var ciphers = require('./encrypter')
 exports.createCipher = exports.Cipher = ciphers.createCipher
 exports.createCipheriv = exports.Cipheriv = ciphers.createCipheriv
@@ -8682,7 +11480,7 @@ function getCiphers () {
 }
 exports.listCiphers = exports.getCiphers = getCiphers
 
-},{"./decrypter":56,"./encrypter":57,"./modes":59}],56:[function(require,module,exports){
+},{"./decrypter":105,"./encrypter":106,"./modes":108}],105:[function(require,module,exports){
 (function (Buffer){
 var aes = require('./aes')
 var Transform = require('cipher-base')
@@ -8823,7 +11621,7 @@ exports.createDecipher = createDecipher
 exports.createDecipheriv = createDecipheriv
 
 }).call(this,require("buffer").Buffer)
-},{"./aes":53,"./authCipher":54,"./modes":59,"./modes/cbc":60,"./modes/cfb":61,"./modes/cfb1":62,"./modes/cfb8":63,"./modes/ctr":64,"./modes/ecb":65,"./modes/ofb":66,"./streamCipher":67,"buffer":79,"cipher-base":80,"evp_bytestokey":116,"inherits":125}],57:[function(require,module,exports){
+},{"./aes":102,"./authCipher":103,"./modes":108,"./modes/cbc":109,"./modes/cfb":110,"./modes/cfb1":111,"./modes/cfb8":112,"./modes/ctr":113,"./modes/ecb":114,"./modes/ofb":115,"./streamCipher":116,"buffer":128,"cipher-base":129,"evp_bytestokey":165,"inherits":174}],106:[function(require,module,exports){
 (function (Buffer){
 var aes = require('./aes')
 var Transform = require('cipher-base')
@@ -8949,7 +11747,7 @@ exports.createCipheriv = createCipheriv
 exports.createCipher = createCipher
 
 }).call(this,require("buffer").Buffer)
-},{"./aes":53,"./authCipher":54,"./modes":59,"./modes/cbc":60,"./modes/cfb":61,"./modes/cfb1":62,"./modes/cfb8":63,"./modes/ctr":64,"./modes/ecb":65,"./modes/ofb":66,"./streamCipher":67,"buffer":79,"cipher-base":80,"evp_bytestokey":116,"inherits":125}],58:[function(require,module,exports){
+},{"./aes":102,"./authCipher":103,"./modes":108,"./modes/cbc":109,"./modes/cfb":110,"./modes/cfb1":111,"./modes/cfb8":112,"./modes/ctr":113,"./modes/ecb":114,"./modes/ofb":115,"./streamCipher":116,"buffer":128,"cipher-base":129,"evp_bytestokey":165,"inherits":174}],107:[function(require,module,exports){
 (function (Buffer){
 var zeros = new Buffer(16)
 zeros.fill(0)
@@ -9051,7 +11849,7 @@ function xor (a, b) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":79}],59:[function(require,module,exports){
+},{"buffer":128}],108:[function(require,module,exports){
 exports['aes-128-ecb'] = {
   cipher: 'AES',
   key: 128,
@@ -9224,7 +12022,7 @@ exports['aes-256-gcm'] = {
   type: 'auth'
 }
 
-},{}],60:[function(require,module,exports){
+},{}],109:[function(require,module,exports){
 var xor = require('buffer-xor')
 
 exports.encrypt = function (self, block) {
@@ -9243,7 +12041,7 @@ exports.decrypt = function (self, block) {
   return xor(out, pad)
 }
 
-},{"buffer-xor":78}],61:[function(require,module,exports){
+},{"buffer-xor":127}],110:[function(require,module,exports){
 (function (Buffer){
 var xor = require('buffer-xor')
 
@@ -9278,7 +12076,7 @@ function encryptStart (self, data, decrypt) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":79,"buffer-xor":78}],62:[function(require,module,exports){
+},{"buffer":128,"buffer-xor":127}],111:[function(require,module,exports){
 (function (Buffer){
 function encryptByte (self, byteParam, decrypt) {
   var pad
@@ -9316,7 +12114,7 @@ function shiftIn (buffer, value) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":79}],63:[function(require,module,exports){
+},{"buffer":128}],112:[function(require,module,exports){
 (function (Buffer){
 function encryptByte (self, byteParam, decrypt) {
   var pad = self._cipher.encryptBlock(self._prev)
@@ -9335,7 +12133,7 @@ exports.encrypt = function (self, chunk, decrypt) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":79}],64:[function(require,module,exports){
+},{"buffer":128}],113:[function(require,module,exports){
 (function (Buffer){
 var xor = require('buffer-xor')
 
@@ -9370,7 +12168,7 @@ exports.encrypt = function (self, chunk) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":79,"buffer-xor":78}],65:[function(require,module,exports){
+},{"buffer":128,"buffer-xor":127}],114:[function(require,module,exports){
 exports.encrypt = function (self, block) {
   return self._cipher.encryptBlock(block)
 }
@@ -9378,7 +12176,7 @@ exports.decrypt = function (self, block) {
   return self._cipher.decryptBlock(block)
 }
 
-},{}],66:[function(require,module,exports){
+},{}],115:[function(require,module,exports){
 (function (Buffer){
 var xor = require('buffer-xor')
 
@@ -9398,7 +12196,7 @@ exports.encrypt = function (self, chunk) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":79,"buffer-xor":78}],67:[function(require,module,exports){
+},{"buffer":128,"buffer-xor":127}],116:[function(require,module,exports){
 (function (Buffer){
 var aes = require('./aes')
 var Transform = require('cipher-base')
@@ -9427,7 +12225,7 @@ StreamCipher.prototype._final = function () {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"./aes":53,"buffer":79,"cipher-base":80,"inherits":125}],68:[function(require,module,exports){
+},{"./aes":102,"buffer":128,"cipher-base":129,"inherits":174}],117:[function(require,module,exports){
 var ebtk = require('evp_bytestokey')
 var aes = require('browserify-aes/browser')
 var DES = require('browserify-des')
@@ -9502,7 +12300,7 @@ function getCiphers () {
 }
 exports.listCiphers = exports.getCiphers = getCiphers
 
-},{"browserify-aes/browser":55,"browserify-aes/modes":59,"browserify-des":69,"browserify-des/modes":70,"evp_bytestokey":116}],69:[function(require,module,exports){
+},{"browserify-aes/browser":104,"browserify-aes/modes":108,"browserify-des":118,"browserify-des/modes":119,"evp_bytestokey":165}],118:[function(require,module,exports){
 (function (Buffer){
 var CipherBase = require('cipher-base')
 var des = require('des.js')
@@ -9549,7 +12347,7 @@ DES.prototype._final = function () {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":79,"cipher-base":80,"des.js":88,"inherits":125}],70:[function(require,module,exports){
+},{"buffer":128,"cipher-base":129,"des.js":137,"inherits":174}],119:[function(require,module,exports){
 exports['des-ecb'] = {
   key: 8,
   iv: 0
@@ -9575,7 +12373,7 @@ exports['des-ede'] = {
   iv: 0
 }
 
-},{}],71:[function(require,module,exports){
+},{}],120:[function(require,module,exports){
 (function (Buffer){
 var bn = require('bn.js');
 var randomBytes = require('randombytes');
@@ -9619,7 +12417,7 @@ function getr(priv) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"bn.js":50,"buffer":79,"randombytes":144}],72:[function(require,module,exports){
+},{"bn.js":99,"buffer":128,"randombytes":193}],121:[function(require,module,exports){
 (function (Buffer){
 'use strict'
 exports['RSA-SHA224'] = exports.sha224WithRSAEncryption = {
@@ -9695,7 +12493,7 @@ exports['RSA-MD5'] = exports.md5WithRSAEncryption = {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":79}],73:[function(require,module,exports){
+},{"buffer":128}],122:[function(require,module,exports){
 (function (Buffer){
 var _algos = require('./algos')
 var createHash = require('create-hash')
@@ -9802,7 +12600,7 @@ module.exports = {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"./algos":72,"./sign":75,"./verify":76,"buffer":79,"create-hash":83,"inherits":125,"stream":165}],74:[function(require,module,exports){
+},{"./algos":121,"./sign":124,"./verify":125,"buffer":128,"create-hash":132,"inherits":174,"stream":214}],123:[function(require,module,exports){
 'use strict'
 exports['1.3.132.0.10'] = 'secp256k1'
 
@@ -9816,7 +12614,7 @@ exports['1.3.132.0.34'] = 'p384'
 
 exports['1.3.132.0.35'] = 'p521'
 
-},{}],75:[function(require,module,exports){
+},{}],124:[function(require,module,exports){
 (function (Buffer){
 // much of this based on https://github.com/indutny/self-signed/blob/gh-pages/lib/rsa.js
 var createHmac = require('create-hmac')
@@ -10005,7 +12803,7 @@ module.exports.getKey = getKey
 module.exports.makeKey = makeKey
 
 }).call(this,require("buffer").Buffer)
-},{"./curves":74,"bn.js":50,"browserify-rsa":71,"buffer":79,"create-hmac":86,"elliptic":98,"parse-asn1":133}],76:[function(require,module,exports){
+},{"./curves":123,"bn.js":99,"browserify-rsa":120,"buffer":128,"create-hmac":135,"elliptic":147,"parse-asn1":182}],125:[function(require,module,exports){
 (function (Buffer){
 // much of this based on https://github.com/indutny/self-signed/blob/gh-pages/lib/rsa.js
 var curves = require('./curves')
@@ -10112,7 +12910,7 @@ function checkValue (b, q) {
 module.exports = verify
 
 }).call(this,require("buffer").Buffer)
-},{"./curves":74,"bn.js":50,"buffer":79,"elliptic":98,"parse-asn1":133}],77:[function(require,module,exports){
+},{"./curves":123,"bn.js":99,"buffer":128,"elliptic":147,"parse-asn1":182}],126:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -10224,7 +13022,7 @@ exports.allocUnsafeSlow = function allocUnsafeSlow(size) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"buffer":79}],78:[function(require,module,exports){
+},{"buffer":128}],127:[function(require,module,exports){
 (function (Buffer){
 module.exports = function xor (a, b) {
   var length = Math.min(a.length, b.length)
@@ -10238,7 +13036,7 @@ module.exports = function xor (a, b) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":79}],79:[function(require,module,exports){
+},{"buffer":128}],128:[function(require,module,exports){
 (function (global){
 /*!
  * The buffer module from node.js, for the browser.
@@ -12031,7 +14829,7 @@ function isnan (val) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"base64-js":49,"ieee754":123,"isarray":127}],80:[function(require,module,exports){
+},{"base64-js":98,"ieee754":172,"isarray":176}],129:[function(require,module,exports){
 (function (Buffer){
 var Transform = require('stream').Transform
 var inherits = require('inherits')
@@ -12125,7 +14923,7 @@ CipherBase.prototype._toString = function (value, enc, fin) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":79,"inherits":125,"stream":165,"string_decoder":166}],81:[function(require,module,exports){
+},{"buffer":128,"inherits":174,"stream":214,"string_decoder":215}],130:[function(require,module,exports){
 (function (Buffer){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -12236,7 +15034,7 @@ function objectToString(o) {
 }
 
 }).call(this,{"isBuffer":require("../../is-buffer/index.js")})
-},{"../../is-buffer/index.js":126}],82:[function(require,module,exports){
+},{"../../is-buffer/index.js":175}],131:[function(require,module,exports){
 (function (Buffer){
 var elliptic = require('elliptic');
 var BN = require('bn.js');
@@ -12362,7 +15160,7 @@ function formatReturnValue(bn, enc, len) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"bn.js":50,"buffer":79,"elliptic":98}],83:[function(require,module,exports){
+},{"bn.js":99,"buffer":128,"elliptic":147}],132:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 var inherits = require('inherits')
@@ -12418,7 +15216,7 @@ module.exports = function createHash (alg) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"./md5":85,"buffer":79,"cipher-base":80,"inherits":125,"ripemd160":156,"sha.js":158}],84:[function(require,module,exports){
+},{"./md5":134,"buffer":128,"cipher-base":129,"inherits":174,"ripemd160":205,"sha.js":207}],133:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 var intSize = 4;
@@ -12455,7 +15253,7 @@ function hash(buf, fn, hashSize, bigEndian) {
 }
 exports.hash = hash;
 }).call(this,require("buffer").Buffer)
-},{"buffer":79}],85:[function(require,module,exports){
+},{"buffer":128}],134:[function(require,module,exports){
 'use strict';
 /*
  * A JavaScript implementation of the RSA Data Security, Inc. MD5 Message
@@ -12612,7 +15410,7 @@ function bit_rol(num, cnt)
 module.exports = function md5(buf) {
   return helpers.hash(buf, core_md5, 16);
 };
-},{"./helpers":84}],86:[function(require,module,exports){
+},{"./helpers":133}],135:[function(require,module,exports){
 (function (Buffer){
 'use strict';
 var createHash = require('create-hash/browser');
@@ -12684,7 +15482,7 @@ module.exports = function createHmac(alg, key) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":79,"create-hash/browser":83,"inherits":125,"stream":165}],87:[function(require,module,exports){
+},{"buffer":128,"create-hash/browser":132,"inherits":174,"stream":214}],136:[function(require,module,exports){
 'use strict'
 
 exports.randomBytes = exports.rng = exports.pseudoRandomBytes = exports.prng = require('randombytes')
@@ -12763,7 +15561,7 @@ var publicEncrypt = require('public-encrypt')
   }
 })
 
-},{"browserify-cipher":68,"browserify-sign":73,"browserify-sign/algos":72,"create-ecdh":82,"create-hash":83,"create-hmac":86,"diffie-hellman":94,"pbkdf2":134,"public-encrypt":138,"randombytes":144}],88:[function(require,module,exports){
+},{"browserify-cipher":117,"browserify-sign":122,"browserify-sign/algos":121,"create-ecdh":131,"create-hash":132,"create-hmac":135,"diffie-hellman":143,"pbkdf2":183,"public-encrypt":187,"randombytes":193}],137:[function(require,module,exports){
 'use strict';
 
 exports.utils = require('./des/utils');
@@ -12772,7 +15570,7 @@ exports.DES = require('./des/des');
 exports.CBC = require('./des/cbc');
 exports.EDE = require('./des/ede');
 
-},{"./des/cbc":89,"./des/cipher":90,"./des/des":91,"./des/ede":92,"./des/utils":93}],89:[function(require,module,exports){
+},{"./des/cbc":138,"./des/cipher":139,"./des/des":140,"./des/ede":141,"./des/utils":142}],138:[function(require,module,exports){
 'use strict';
 
 var assert = require('minimalistic-assert');
@@ -12839,7 +15637,7 @@ proto._update = function _update(inp, inOff, out, outOff) {
   }
 };
 
-},{"inherits":125,"minimalistic-assert":129}],90:[function(require,module,exports){
+},{"inherits":174,"minimalistic-assert":178}],139:[function(require,module,exports){
 'use strict';
 
 var assert = require('minimalistic-assert');
@@ -12982,7 +15780,7 @@ Cipher.prototype._finalDecrypt = function _finalDecrypt() {
   return this._unpad(out);
 };
 
-},{"minimalistic-assert":129}],91:[function(require,module,exports){
+},{"minimalistic-assert":178}],140:[function(require,module,exports){
 'use strict';
 
 var assert = require('minimalistic-assert');
@@ -13127,7 +15925,7 @@ DES.prototype._decrypt = function _decrypt(state, lStart, rStart, out, off) {
   utils.rip(l, r, out, off);
 };
 
-},{"../des":88,"inherits":125,"minimalistic-assert":129}],92:[function(require,module,exports){
+},{"../des":137,"inherits":174,"minimalistic-assert":178}],141:[function(require,module,exports){
 'use strict';
 
 var assert = require('minimalistic-assert');
@@ -13184,7 +15982,7 @@ EDE.prototype._update = function _update(inp, inOff, out, outOff) {
 EDE.prototype._pad = DES.prototype._pad;
 EDE.prototype._unpad = DES.prototype._unpad;
 
-},{"../des":88,"inherits":125,"minimalistic-assert":129}],93:[function(require,module,exports){
+},{"../des":137,"inherits":174,"minimalistic-assert":178}],142:[function(require,module,exports){
 'use strict';
 
 exports.readUInt32BE = function readUInt32BE(bytes, off) {
@@ -13442,7 +16240,7 @@ exports.padSplit = function padSplit(num, size, group) {
   return out.join(' ');
 };
 
-},{}],94:[function(require,module,exports){
+},{}],143:[function(require,module,exports){
 (function (Buffer){
 var generatePrime = require('./lib/generatePrime')
 var primes = require('./lib/primes.json')
@@ -13488,7 +16286,7 @@ exports.DiffieHellmanGroup = exports.createDiffieHellmanGroup = exports.getDiffi
 exports.createDiffieHellman = exports.DiffieHellman = createDiffieHellman
 
 }).call(this,require("buffer").Buffer)
-},{"./lib/dh":95,"./lib/generatePrime":96,"./lib/primes.json":97,"buffer":79}],95:[function(require,module,exports){
+},{"./lib/dh":144,"./lib/generatePrime":145,"./lib/primes.json":146,"buffer":128}],144:[function(require,module,exports){
 (function (Buffer){
 var BN = require('bn.js');
 var MillerRabin = require('miller-rabin');
@@ -13656,7 +16454,7 @@ function formatReturnValue(bn, enc) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"./generatePrime":96,"bn.js":50,"buffer":79,"miller-rabin":128,"randombytes":144}],96:[function(require,module,exports){
+},{"./generatePrime":145,"bn.js":99,"buffer":128,"miller-rabin":177,"randombytes":193}],145:[function(require,module,exports){
 var randomBytes = require('randombytes');
 module.exports = findPrime;
 findPrime.simpleSieve = simpleSieve;
@@ -13763,7 +16561,7 @@ function findPrime(bits, gen) {
 
 }
 
-},{"bn.js":50,"miller-rabin":128,"randombytes":144}],97:[function(require,module,exports){
+},{"bn.js":99,"miller-rabin":177,"randombytes":193}],146:[function(require,module,exports){
 module.exports={
     "modp1": {
         "gen": "02",
@@ -13798,7 +16596,7 @@ module.exports={
         "prime": "ffffffffffffffffc90fdaa22168c234c4c6628b80dc1cd129024e088a67cc74020bbea63b139b22514a08798e3404ddef9519b3cd3a431b302b0a6df25f14374fe1356d6d51c245e485b576625e7ec6f44c42e9a637ed6b0bff5cb6f406b7edee386bfb5a899fa5ae9f24117c4b1fe649286651ece45b3dc2007cb8a163bf0598da48361c55d39a69163fa8fd24cf5f83655d23dca3ad961c62f356208552bb9ed529077096966d670c354e4abc9804f1746c08ca18217c32905e462e36ce3be39e772c180e86039b2783a2ec07a28fb5c55df06f4c52c9de2bcbf6955817183995497cea956ae515d2261898fa051015728e5a8aaac42dad33170d04507a33a85521abdf1cba64ecfb850458dbef0a8aea71575d060c7db3970f85a6e1e4c7abf5ae8cdb0933d71e8c94e04a25619dcee3d2261ad2ee6bf12ffa06d98a0864d87602733ec86a64521f2b18177b200cbbe117577a615d6c770988c0bad946e208e24fa074e5ab3143db5bfce0fd108e4b82d120a92108011a723c12a787e6d788719a10bdba5b2699c327186af4e23c1a946834b6150bda2583e9ca2ad44ce8dbbbc2db04de8ef92e8efc141fbecaa6287c59474e6bc05d99b2964fa090c3a2233ba186515be7ed1f612970cee2d7afb81bdd762170481cd0069127d5b05aa993b4ea988d8fddc186ffb7dc90a6c08f4df435c93402849236c3fab4d27c7026c1d4dcb2602646dec9751e763dba37bdf8ff9406ad9e530ee5db382f413001aeb06a53ed9027d831179727b0865a8918da3edbebcf9b14ed44ce6cbaced4bb1bdb7f1447e6cc254b332051512bd7af426fb8f401378cd2bf5983ca01c64b92ecf032ea15d1721d03f482d7ce6e74fef6d55e702f46980c82b5a84031900b1c9e59e7c97fbec7e8f323a97a7e36cc88be0f1d45b7ff585ac54bd407b22b4154aacc8f6d7ebf48e1d814cc5ed20f8037e0a79715eef29be32806a1d58bb7c5da76f550aa3d8a1fbff0eb19ccb1a313d55cda56c9ec2ef29632387fe8d76e3c0468043e8f663f4860ee12bf2d5b0b7474d6e694f91e6dbe115974a3926f12fee5e438777cb6a932df8cd8bec4d073b931ba3bc832b68d9dd300741fa7bf8afc47ed2576f6936ba424663aab639c5ae4f5683423b4742bf1c978238f16cbe39d652de3fdb8befc848ad922222e04a4037c0713eb57a81a23f0c73473fc646cea306b4bcbc8862f8385ddfa9d4b7fa2c087e879683303ed5bdd3a062b3cf5b3a278a66d2a13f83f44f82ddf310ee074ab6a364597e899a0255dc164f31cc50846851df9ab48195ded7ea1b1d510bd7ee74d73faf36bc31ecfa268359046f4eb879f924009438b481c6cd7889a002ed5ee382bc9190da6fc026e479558e4475677e9aa9e3050e2765694dfc81f56e880b96e7160c980dd98edd3dfffffffffffffffff"
     }
 }
-},{}],98:[function(require,module,exports){
+},{}],147:[function(require,module,exports){
 'use strict';
 
 var elliptic = exports;
@@ -13814,7 +16612,7 @@ elliptic.curves = require('./elliptic/curves');
 elliptic.ec = require('./elliptic/ec');
 elliptic.eddsa = require('./elliptic/eddsa');
 
-},{"../package.json":114,"./elliptic/curve":101,"./elliptic/curves":104,"./elliptic/ec":105,"./elliptic/eddsa":108,"./elliptic/hmac-drbg":111,"./elliptic/utils":113,"brorand":51}],99:[function(require,module,exports){
+},{"../package.json":163,"./elliptic/curve":150,"./elliptic/curves":153,"./elliptic/ec":154,"./elliptic/eddsa":157,"./elliptic/hmac-drbg":160,"./elliptic/utils":162,"brorand":100}],148:[function(require,module,exports){
 'use strict';
 
 var BN = require('bn.js');
@@ -14191,7 +16989,7 @@ BasePoint.prototype.dblp = function dblp(k) {
   return r;
 };
 
-},{"../../elliptic":98,"bn.js":50}],100:[function(require,module,exports){
+},{"../../elliptic":147,"bn.js":99}],149:[function(require,module,exports){
 'use strict';
 
 var curve = require('../curve');
@@ -14626,7 +17424,7 @@ Point.prototype.eqXToP = function eqXToP(x) {
 Point.prototype.toP = Point.prototype.normalize;
 Point.prototype.mixedAdd = Point.prototype.add;
 
-},{"../../elliptic":98,"../curve":101,"bn.js":50,"inherits":125}],101:[function(require,module,exports){
+},{"../../elliptic":147,"../curve":150,"bn.js":99,"inherits":174}],150:[function(require,module,exports){
 'use strict';
 
 var curve = exports;
@@ -14636,7 +17434,7 @@ curve.short = require('./short');
 curve.mont = require('./mont');
 curve.edwards = require('./edwards');
 
-},{"./base":99,"./edwards":100,"./mont":102,"./short":103}],102:[function(require,module,exports){
+},{"./base":148,"./edwards":149,"./mont":151,"./short":152}],151:[function(require,module,exports){
 'use strict';
 
 var curve = require('../curve');
@@ -14818,7 +17616,7 @@ Point.prototype.getX = function getX() {
   return this.x.fromRed();
 };
 
-},{"../../elliptic":98,"../curve":101,"bn.js":50,"inherits":125}],103:[function(require,module,exports){
+},{"../../elliptic":147,"../curve":150,"bn.js":99,"inherits":174}],152:[function(require,module,exports){
 'use strict';
 
 var curve = require('../curve');
@@ -15758,7 +18556,7 @@ JPoint.prototype.isInfinity = function isInfinity() {
   return this.z.cmpn(0) === 0;
 };
 
-},{"../../elliptic":98,"../curve":101,"bn.js":50,"inherits":125}],104:[function(require,module,exports){
+},{"../../elliptic":147,"../curve":150,"bn.js":99,"inherits":174}],153:[function(require,module,exports){
 'use strict';
 
 var curves = exports;
@@ -15965,7 +18763,7 @@ defineCurve('secp256k1', {
   ]
 });
 
-},{"../elliptic":98,"./precomputed/secp256k1":112,"hash.js":117}],105:[function(require,module,exports){
+},{"../elliptic":147,"./precomputed/secp256k1":161,"hash.js":166}],154:[function(require,module,exports){
 'use strict';
 
 var BN = require('bn.js');
@@ -16204,7 +19002,7 @@ EC.prototype.getKeyRecoveryParam = function(e, signature, Q, enc) {
   throw new Error('Unable to find valid recovery factor');
 };
 
-},{"../../elliptic":98,"./key":106,"./signature":107,"bn.js":50}],106:[function(require,module,exports){
+},{"../../elliptic":147,"./key":155,"./signature":156,"bn.js":99}],155:[function(require,module,exports){
 'use strict';
 
 var BN = require('bn.js');
@@ -16313,7 +19111,7 @@ KeyPair.prototype.inspect = function inspect() {
          ' pub: ' + (this.pub && this.pub.inspect()) + ' >';
 };
 
-},{"bn.js":50}],107:[function(require,module,exports){
+},{"bn.js":99}],156:[function(require,module,exports){
 'use strict';
 
 var BN = require('bn.js');
@@ -16450,7 +19248,7 @@ Signature.prototype.toDER = function toDER(enc) {
   return utils.encode(res, enc);
 };
 
-},{"../../elliptic":98,"bn.js":50}],108:[function(require,module,exports){
+},{"../../elliptic":147,"bn.js":99}],157:[function(require,module,exports){
 'use strict';
 
 var hash = require('hash.js');
@@ -16570,7 +19368,7 @@ EDDSA.prototype.isPoint = function isPoint(val) {
   return val instanceof this.pointClass;
 };
 
-},{"../../elliptic":98,"./key":109,"./signature":110,"hash.js":117}],109:[function(require,module,exports){
+},{"../../elliptic":147,"./key":158,"./signature":159,"hash.js":166}],158:[function(require,module,exports){
 'use strict';
 
 var elliptic = require('../../elliptic');
@@ -16668,7 +19466,7 @@ KeyPair.prototype.getPublic = function getPublic(enc) {
 
 module.exports = KeyPair;
 
-},{"../../elliptic":98}],110:[function(require,module,exports){
+},{"../../elliptic":147}],159:[function(require,module,exports){
 'use strict';
 
 var BN = require('bn.js');
@@ -16736,7 +19534,7 @@ Signature.prototype.toHex = function toHex() {
 
 module.exports = Signature;
 
-},{"../../elliptic":98,"bn.js":50}],111:[function(require,module,exports){
+},{"../../elliptic":147,"bn.js":99}],160:[function(require,module,exports){
 'use strict';
 
 var hash = require('hash.js');
@@ -16852,7 +19650,7 @@ HmacDRBG.prototype.generate = function generate(len, enc, add, addEnc) {
   return utils.encode(res, enc);
 };
 
-},{"../elliptic":98,"hash.js":117}],112:[function(require,module,exports){
+},{"../elliptic":147,"hash.js":166}],161:[function(require,module,exports){
 module.exports = {
   doubles: {
     step: 4,
@@ -17634,7 +20432,7 @@ module.exports = {
   }
 };
 
-},{}],113:[function(require,module,exports){
+},{}],162:[function(require,module,exports){
 'use strict';
 
 var utils = exports;
@@ -17808,7 +20606,7 @@ function intFromLE(bytes) {
 utils.intFromLE = intFromLE;
 
 
-},{"bn.js":50}],114:[function(require,module,exports){
+},{"bn.js":99}],163:[function(require,module,exports){
 module.exports={
   "_args": [
     [
@@ -17929,7 +20727,7 @@ module.exports={
   "version": "6.3.2"
 }
 
-},{}],115:[function(require,module,exports){
+},{}],164:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -18233,7 +21031,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],116:[function(require,module,exports){
+},{}],165:[function(require,module,exports){
 (function (Buffer){
 var md5 = require('create-hash/md5')
 module.exports = EVP_BytesToKey
@@ -18305,7 +21103,7 @@ function EVP_BytesToKey (password, salt, keyLen, ivLen) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":79,"create-hash/md5":85}],117:[function(require,module,exports){
+},{"buffer":128,"create-hash/md5":134}],166:[function(require,module,exports){
 var hash = exports;
 
 hash.utils = require('./hash/utils');
@@ -18322,7 +21120,7 @@ hash.sha384 = hash.sha.sha384;
 hash.sha512 = hash.sha.sha512;
 hash.ripemd160 = hash.ripemd.ripemd160;
 
-},{"./hash/common":118,"./hash/hmac":119,"./hash/ripemd":120,"./hash/sha":121,"./hash/utils":122}],118:[function(require,module,exports){
+},{"./hash/common":167,"./hash/hmac":168,"./hash/ripemd":169,"./hash/sha":170,"./hash/utils":171}],167:[function(require,module,exports){
 var hash = require('../hash');
 var utils = hash.utils;
 var assert = utils.assert;
@@ -18415,7 +21213,7 @@ BlockHash.prototype._pad = function pad() {
   return res;
 };
 
-},{"../hash":117}],119:[function(require,module,exports){
+},{"../hash":166}],168:[function(require,module,exports){
 var hmac = exports;
 
 var hash = require('../hash');
@@ -18465,7 +21263,7 @@ Hmac.prototype.digest = function digest(enc) {
   return this.outer.digest(enc);
 };
 
-},{"../hash":117}],120:[function(require,module,exports){
+},{"../hash":166}],169:[function(require,module,exports){
 var hash = require('../hash');
 var utils = hash.utils;
 
@@ -18611,7 +21409,7 @@ var sh = [
   8, 5, 12, 9, 12, 5, 14, 6, 8, 13, 6, 5, 15, 13, 11, 11
 ];
 
-},{"../hash":117}],121:[function(require,module,exports){
+},{"../hash":166}],170:[function(require,module,exports){
 var hash = require('../hash');
 var utils = hash.utils;
 var assert = utils.assert;
@@ -19177,7 +21975,7 @@ function g1_512_lo(xh, xl) {
   return r;
 }
 
-},{"../hash":117}],122:[function(require,module,exports){
+},{"../hash":166}],171:[function(require,module,exports){
 var utils = exports;
 var inherits = require('inherits');
 
@@ -19436,7 +22234,7 @@ function shr64_lo(ah, al, num) {
 };
 exports.shr64_lo = shr64_lo;
 
-},{"inherits":125}],123:[function(require,module,exports){
+},{"inherits":174}],172:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = nBytes * 8 - mLen - 1
@@ -19522,7 +22320,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],124:[function(require,module,exports){
+},{}],173:[function(require,module,exports){
 
 var indexOf = [].indexOf;
 
@@ -19533,7 +22331,7 @@ module.exports = function(arr, obj){
   }
   return -1;
 };
-},{}],125:[function(require,module,exports){
+},{}],174:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -19558,7 +22356,7 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],126:[function(require,module,exports){
+},{}],175:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -19581,14 +22379,14 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],127:[function(require,module,exports){
+},{}],176:[function(require,module,exports){
 var toString = {}.toString;
 
 module.exports = Array.isArray || function (arr) {
   return toString.call(arr) == '[object Array]';
 };
 
-},{}],128:[function(require,module,exports){
+},{}],177:[function(require,module,exports){
 var bn = require('bn.js');
 var brorand = require('brorand');
 
@@ -19703,7 +22501,7 @@ MillerRabin.prototype.getDivisor = function getDivisor(n, k) {
   return false;
 };
 
-},{"bn.js":50,"brorand":51}],129:[function(require,module,exports){
+},{"bn.js":99,"brorand":100}],178:[function(require,module,exports){
 module.exports = assert;
 
 function assert(val, msg) {
@@ -19716,7 +22514,7 @@ assert.equal = function assertEqual(l, r, msg) {
     throw new Error(msg || ('Assertion failed: ' + l + ' != ' + r));
 };
 
-},{}],130:[function(require,module,exports){
+},{}],179:[function(require,module,exports){
 module.exports={"2.16.840.1.101.3.4.1.1": "aes-128-ecb",
 "2.16.840.1.101.3.4.1.2": "aes-128-cbc",
 "2.16.840.1.101.3.4.1.3": "aes-128-ofb",
@@ -19730,7 +22528,7 @@ module.exports={"2.16.840.1.101.3.4.1.1": "aes-128-ecb",
 "2.16.840.1.101.3.4.1.43": "aes-256-ofb",
 "2.16.840.1.101.3.4.1.44": "aes-256-cfb"
 }
-},{}],131:[function(require,module,exports){
+},{}],180:[function(require,module,exports){
 // from https://github.com/indutny/self-signed/blob/gh-pages/lib/asn1.js
 // Fedor, you are amazing.
 
@@ -19849,7 +22647,7 @@ exports.signature = asn1.define('signature', function () {
   )
 })
 
-},{"asn1.js":35}],132:[function(require,module,exports){
+},{"asn1.js":84}],181:[function(require,module,exports){
 (function (Buffer){
 // adapted from https://github.com/apatil/pemstrip
 var findProc = /Proc-Type: 4,ENCRYPTED\r?\nDEK-Info: AES-((?:128)|(?:192)|(?:256))-CBC,([0-9A-H]+)\r?\n\r?\n([0-9A-z\n\r\+\/\=]+)\r?\n/m
@@ -19883,7 +22681,7 @@ module.exports = function (okey, password) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"browserify-aes":55,"buffer":79,"evp_bytestokey":116}],133:[function(require,module,exports){
+},{"browserify-aes":104,"buffer":128,"evp_bytestokey":165}],182:[function(require,module,exports){
 (function (Buffer){
 var asn1 = require('./asn1')
 var aesid = require('./aesid.json')
@@ -19988,7 +22786,7 @@ function decrypt (data, password) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"./aesid.json":130,"./asn1":131,"./fixProc":132,"browserify-aes":55,"buffer":79,"pbkdf2":134}],134:[function(require,module,exports){
+},{"./aesid.json":179,"./asn1":180,"./fixProc":181,"browserify-aes":104,"buffer":128,"pbkdf2":183}],183:[function(require,module,exports){
 (function (process,Buffer){
 var createHmac = require('create-hmac')
 var checkParameters = require('./precondition')
@@ -20060,7 +22858,7 @@ exports.pbkdf2Sync = function (password, salt, iterations, keylen, digest) {
 }
 
 }).call(this,require('_process'),require("buffer").Buffer)
-},{"./precondition":135,"_process":137,"buffer":79,"create-hmac":86}],135:[function(require,module,exports){
+},{"./precondition":184,"_process":186,"buffer":128,"create-hmac":135}],184:[function(require,module,exports){
 var MAX_ALLOC = Math.pow(2, 30) - 1 // default in iojs
 module.exports = function (iterations, keylen) {
   if (typeof iterations !== 'number') {
@@ -20080,7 +22878,7 @@ module.exports = function (iterations, keylen) {
   }
 }
 
-},{}],136:[function(require,module,exports){
+},{}],185:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -20127,7 +22925,7 @@ function nextTick(fn, arg1, arg2, arg3) {
 }
 
 }).call(this,require('_process'))
-},{"_process":137}],137:[function(require,module,exports){
+},{"_process":186}],186:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -20309,7 +23107,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],138:[function(require,module,exports){
+},{}],187:[function(require,module,exports){
 exports.publicEncrypt = require('./publicEncrypt');
 exports.privateDecrypt = require('./privateDecrypt');
 
@@ -20320,7 +23118,7 @@ exports.privateEncrypt = function privateEncrypt(key, buf) {
 exports.publicDecrypt = function publicDecrypt(key, buf) {
   return exports.privateDecrypt(key, buf, true);
 };
-},{"./privateDecrypt":140,"./publicEncrypt":141}],139:[function(require,module,exports){
+},{"./privateDecrypt":189,"./publicEncrypt":190}],188:[function(require,module,exports){
 (function (Buffer){
 var createHash = require('create-hash');
 module.exports = function (seed, len) {
@@ -20339,7 +23137,7 @@ function i2ops(c) {
   return out;
 }
 }).call(this,require("buffer").Buffer)
-},{"buffer":79,"create-hash":83}],140:[function(require,module,exports){
+},{"buffer":128,"create-hash":132}],189:[function(require,module,exports){
 (function (Buffer){
 var parseKeys = require('parse-asn1');
 var mgf = require('./mgf');
@@ -20450,7 +23248,7 @@ function compare(a, b){
   return dif;
 }
 }).call(this,require("buffer").Buffer)
-},{"./mgf":139,"./withPublic":142,"./xor":143,"bn.js":50,"browserify-rsa":71,"buffer":79,"create-hash":83,"parse-asn1":133}],141:[function(require,module,exports){
+},{"./mgf":188,"./withPublic":191,"./xor":192,"bn.js":99,"browserify-rsa":120,"buffer":128,"create-hash":132,"parse-asn1":182}],190:[function(require,module,exports){
 (function (Buffer){
 var parseKeys = require('parse-asn1');
 var randomBytes = require('randombytes');
@@ -20548,7 +23346,7 @@ function nonZero(len, crypto) {
   return out;
 }
 }).call(this,require("buffer").Buffer)
-},{"./mgf":139,"./withPublic":142,"./xor":143,"bn.js":50,"browserify-rsa":71,"buffer":79,"create-hash":83,"parse-asn1":133,"randombytes":144}],142:[function(require,module,exports){
+},{"./mgf":188,"./withPublic":191,"./xor":192,"bn.js":99,"browserify-rsa":120,"buffer":128,"create-hash":132,"parse-asn1":182,"randombytes":193}],191:[function(require,module,exports){
 (function (Buffer){
 var bn = require('bn.js');
 function withPublic(paddedMsg, key) {
@@ -20561,7 +23359,7 @@ function withPublic(paddedMsg, key) {
 
 module.exports = withPublic;
 }).call(this,require("buffer").Buffer)
-},{"bn.js":50,"buffer":79}],143:[function(require,module,exports){
+},{"bn.js":99,"buffer":128}],192:[function(require,module,exports){
 module.exports = function xor(a, b) {
   var len = a.length;
   var i = -1;
@@ -20570,7 +23368,7 @@ module.exports = function xor(a, b) {
   }
   return a
 };
-},{}],144:[function(require,module,exports){
+},{}],193:[function(require,module,exports){
 (function (process,global,Buffer){
 'use strict'
 
@@ -20610,10 +23408,10 @@ function randomBytes (size, cb) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"_process":137,"buffer":79}],145:[function(require,module,exports){
+},{"_process":186,"buffer":128}],194:[function(require,module,exports){
 module.exports = require("./lib/_stream_duplex.js")
 
-},{"./lib/_stream_duplex.js":146}],146:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":195}],195:[function(require,module,exports){
 // a duplex stream is just a stream that is both readable and writable.
 // Since JS doesn't have multiple prototypal inheritance, this class
 // prototypally inherits from Readable, and then parasitically from
@@ -20689,7 +23487,7 @@ function forEach(xs, f) {
     f(xs[i], i);
   }
 }
-},{"./_stream_readable":148,"./_stream_writable":150,"core-util-is":81,"inherits":125,"process-nextick-args":136}],147:[function(require,module,exports){
+},{"./_stream_readable":197,"./_stream_writable":199,"core-util-is":130,"inherits":174,"process-nextick-args":185}],196:[function(require,module,exports){
 // a passthrough stream.
 // basically just the most minimal sort of Transform stream.
 // Every written chunk gets output as-is.
@@ -20716,7 +23514,7 @@ function PassThrough(options) {
 PassThrough.prototype._transform = function (chunk, encoding, cb) {
   cb(null, chunk);
 };
-},{"./_stream_transform":149,"core-util-is":81,"inherits":125}],148:[function(require,module,exports){
+},{"./_stream_transform":198,"core-util-is":130,"inherits":174}],197:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -21656,7 +24454,7 @@ function indexOf(xs, x) {
   return -1;
 }
 }).call(this,require('_process'))
-},{"./_stream_duplex":146,"./internal/streams/BufferList":151,"_process":137,"buffer":79,"buffer-shims":77,"core-util-is":81,"events":115,"inherits":125,"isarray":127,"process-nextick-args":136,"string_decoder/":166,"util":52}],149:[function(require,module,exports){
+},{"./_stream_duplex":195,"./internal/streams/BufferList":200,"_process":186,"buffer":128,"buffer-shims":126,"core-util-is":130,"events":164,"inherits":174,"isarray":176,"process-nextick-args":185,"string_decoder/":215,"util":101}],198:[function(require,module,exports){
 // a transform stream is a readable/writable stream where you do
 // something with the data.  Sometimes it's called a "filter",
 // but that's not a great name for it, since that implies a thing where
@@ -21837,7 +24635,7 @@ function done(stream, er) {
 
   return stream.push(null);
 }
-},{"./_stream_duplex":146,"core-util-is":81,"inherits":125}],150:[function(require,module,exports){
+},{"./_stream_duplex":195,"core-util-is":130,"inherits":174}],199:[function(require,module,exports){
 (function (process){
 // A bit simpler than readable streams.
 // Implement an async ._write(chunk, encoding, cb), and it'll handle all
@@ -22366,7 +25164,7 @@ function CorkedRequest(state) {
   };
 }
 }).call(this,require('_process'))
-},{"./_stream_duplex":146,"_process":137,"buffer":79,"buffer-shims":77,"core-util-is":81,"events":115,"inherits":125,"process-nextick-args":136,"util-deprecate":167}],151:[function(require,module,exports){
+},{"./_stream_duplex":195,"_process":186,"buffer":128,"buffer-shims":126,"core-util-is":130,"events":164,"inherits":174,"process-nextick-args":185,"util-deprecate":216}],200:[function(require,module,exports){
 'use strict';
 
 var Buffer = require('buffer').Buffer;
@@ -22431,10 +25229,10 @@ BufferList.prototype.concat = function (n) {
   }
   return ret;
 };
-},{"buffer":79,"buffer-shims":77}],152:[function(require,module,exports){
+},{"buffer":128,"buffer-shims":126}],201:[function(require,module,exports){
 module.exports = require("./lib/_stream_passthrough.js")
 
-},{"./lib/_stream_passthrough.js":147}],153:[function(require,module,exports){
+},{"./lib/_stream_passthrough.js":196}],202:[function(require,module,exports){
 (function (process){
 var Stream = (function (){
   try {
@@ -22454,13 +25252,13 @@ if (!process.browser && process.env.READABLE_STREAM === 'disable' && Stream) {
 }
 
 }).call(this,require('_process'))
-},{"./lib/_stream_duplex.js":146,"./lib/_stream_passthrough.js":147,"./lib/_stream_readable.js":148,"./lib/_stream_transform.js":149,"./lib/_stream_writable.js":150,"_process":137}],154:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":195,"./lib/_stream_passthrough.js":196,"./lib/_stream_readable.js":197,"./lib/_stream_transform.js":198,"./lib/_stream_writable.js":199,"_process":186}],203:[function(require,module,exports){
 module.exports = require("./lib/_stream_transform.js")
 
-},{"./lib/_stream_transform.js":149}],155:[function(require,module,exports){
+},{"./lib/_stream_transform.js":198}],204:[function(require,module,exports){
 module.exports = require("./lib/_stream_writable.js")
 
-},{"./lib/_stream_writable.js":150}],156:[function(require,module,exports){
+},{"./lib/_stream_writable.js":199}],205:[function(require,module,exports){
 (function (Buffer){
 /*
 CryptoJS v3.1.2
@@ -22674,7 +25472,7 @@ function ripemd160 (message) {
 module.exports = ripemd160
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":79}],157:[function(require,module,exports){
+},{"buffer":128}],206:[function(require,module,exports){
 (function (Buffer){
 // prototype class for hash functions
 function Hash (blockSize, finalSize) {
@@ -22747,7 +25545,7 @@ Hash.prototype._update = function () {
 module.exports = Hash
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":79}],158:[function(require,module,exports){
+},{"buffer":128}],207:[function(require,module,exports){
 var exports = module.exports = function SHA (algorithm) {
   algorithm = algorithm.toLowerCase()
 
@@ -22764,7 +25562,7 @@ exports.sha256 = require('./sha256')
 exports.sha384 = require('./sha384')
 exports.sha512 = require('./sha512')
 
-},{"./sha":159,"./sha1":160,"./sha224":161,"./sha256":162,"./sha384":163,"./sha512":164}],159:[function(require,module,exports){
+},{"./sha":208,"./sha1":209,"./sha224":210,"./sha256":211,"./sha384":212,"./sha512":213}],208:[function(require,module,exports){
 (function (Buffer){
 /*
  * A JavaScript implementation of the Secure Hash Algorithm, SHA-0, as defined
@@ -22861,7 +25659,7 @@ Sha.prototype._hash = function () {
 module.exports = Sha
 
 }).call(this,require("buffer").Buffer)
-},{"./hash":157,"buffer":79,"inherits":125}],160:[function(require,module,exports){
+},{"./hash":206,"buffer":128,"inherits":174}],209:[function(require,module,exports){
 (function (Buffer){
 /*
  * A JavaScript implementation of the Secure Hash Algorithm, SHA-1, as defined
@@ -22963,7 +25761,7 @@ Sha1.prototype._hash = function () {
 module.exports = Sha1
 
 }).call(this,require("buffer").Buffer)
-},{"./hash":157,"buffer":79,"inherits":125}],161:[function(require,module,exports){
+},{"./hash":206,"buffer":128,"inherits":174}],210:[function(require,module,exports){
 (function (Buffer){
 /**
  * A JavaScript implementation of the Secure Hash Algorithm, SHA-256, as defined
@@ -23019,7 +25817,7 @@ Sha224.prototype._hash = function () {
 module.exports = Sha224
 
 }).call(this,require("buffer").Buffer)
-},{"./hash":157,"./sha256":162,"buffer":79,"inherits":125}],162:[function(require,module,exports){
+},{"./hash":206,"./sha256":211,"buffer":128,"inherits":174}],211:[function(require,module,exports){
 (function (Buffer){
 /**
  * A JavaScript implementation of the Secure Hash Algorithm, SHA-256, as defined
@@ -23157,7 +25955,7 @@ Sha256.prototype._hash = function () {
 module.exports = Sha256
 
 }).call(this,require("buffer").Buffer)
-},{"./hash":157,"buffer":79,"inherits":125}],163:[function(require,module,exports){
+},{"./hash":206,"buffer":128,"inherits":174}],212:[function(require,module,exports){
 (function (Buffer){
 var inherits = require('inherits')
 var SHA512 = require('./sha512')
@@ -23217,7 +26015,7 @@ Sha384.prototype._hash = function () {
 module.exports = Sha384
 
 }).call(this,require("buffer").Buffer)
-},{"./hash":157,"./sha512":164,"buffer":79,"inherits":125}],164:[function(require,module,exports){
+},{"./hash":206,"./sha512":213,"buffer":128,"inherits":174}],213:[function(require,module,exports){
 (function (Buffer){
 var inherits = require('inherits')
 var Hash = require('./hash')
@@ -23480,7 +26278,7 @@ Sha512.prototype._hash = function () {
 module.exports = Sha512
 
 }).call(this,require("buffer").Buffer)
-},{"./hash":157,"buffer":79,"inherits":125}],165:[function(require,module,exports){
+},{"./hash":206,"buffer":128,"inherits":174}],214:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -23609,7 +26407,7 @@ Stream.prototype.pipe = function(dest, options) {
   return dest;
 };
 
-},{"events":115,"inherits":125,"readable-stream/duplex.js":145,"readable-stream/passthrough.js":152,"readable-stream/readable.js":153,"readable-stream/transform.js":154,"readable-stream/writable.js":155}],166:[function(require,module,exports){
+},{"events":164,"inherits":174,"readable-stream/duplex.js":194,"readable-stream/passthrough.js":201,"readable-stream/readable.js":202,"readable-stream/transform.js":203,"readable-stream/writable.js":204}],215:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -23832,7 +26630,7 @@ function base64DetectIncompleteChar(buffer) {
   this.charLength = this.charReceived ? 3 : 0;
 }
 
-},{"buffer":79}],167:[function(require,module,exports){
+},{"buffer":128}],216:[function(require,module,exports){
 (function (global){
 
 /**
@@ -23903,7 +26701,7 @@ function config (name) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],168:[function(require,module,exports){
+},{}],217:[function(require,module,exports){
 var indexOf = require('indexof');
 
 var Object_keys = function (obj) {
@@ -24043,4 +26841,4 @@ exports.createContext = Script.createContext = function (context) {
     return copy;
 };
 
-},{"indexof":124}]},{},[2]);
+},{"indexof":173}]},{},[20]);
