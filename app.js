@@ -2,9 +2,8 @@ var ui = require('./yindex')
 var insert = require('insert-css')
 
 var fs = require('fs')
-var html = fs.readFileSync('./module.html')
-var css = fs.readFileSync('./module.css')
-
+var html = fs.readFileSync('./module.html', 'utf8')
+var css = fs.readFileSync('./module.css', 'utf8')
 insert(css)
 document.body.innerHTML = html;
 // thats mod element 
