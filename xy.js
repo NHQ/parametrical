@@ -2,7 +2,9 @@ var xyify = require('uxer/xygrid')
 
 module.exports = function(p, cb){
   if(!cb) cb = function(){}
+  var par = p.el
   var el = createNode()
+  par.appendChild(el)
   if(p && p.style){
     for(var style in p) el.style[style] = p.style[style]
   }
@@ -29,21 +31,22 @@ module.exports = function(p, cb){
     ctx.stroke()
   }
 
+  function createNode(){
+    var node = document.createElement('canvas')
+    node.width = parseFloat(getComputedStyle(par).width) 
+    node.height = parseFloat(getComputedStyle(par).height)
+    node.style.width = node.width + 'px'
+    node.style.height = node.height + 'px'
+    //node.style.border = '7px solid black'
+    //node.style.display = 'inline-flex'
+    node.style.boxSizing = 'border-box'
+    node.style.userSelect = 'none'
+    return node
+  }
+
 
 }
 
-function createNode(){
-  var node = document.createElement('canvas')
-  node.width = 122
-  node.height = 122
-  node.style.width = node.width + 'px'
-  node.style.height = node.height + 'px'
-  node.style.border = '7px solid black'
-  node.style.display = 'inline-flex'
-  node.style.boxSizing = 'border-box'
-  node.style.userSelect = 'none'
-  return node
-}
 
 function dot(){
   var d = document.createElement('div')

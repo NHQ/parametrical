@@ -1,15 +1,44 @@
 .module{
-  height: 100%;
-  display: flex;
-  flex-wrap:wrap;
-  justify-content: space-around;
-  align-items: space-between;
+  width:100%;
+  height100%;
+}
+
+.module > div {
+  margin: 11px 0;
 }
 
 .dial{
-  min-width: 200px;
+  margin: 0;
+  padding: 0;
+  width: 200px;
   height:200px;
   border-radius: 50%;
-  border: 7px dotted black;
+  border: 7px solid black;
   border-top: 7px solid yellow;
+}
+
+.amod{
+  margin: 0;
+  padding: 0;
+  width: 200px;
+  height: 200px;
+  box-sizing: border-box;
+}
+
+.handle{
+  margin: 0;
+  padding: 0;
+  opacity:.6;
+}
+
+.xy{
+  width: 200px;
+  height:200px;
+  border: 3px solid blue
+}
+
+.amod canvas{
+  margin: 0;
+  padding: 0;
+  border: 3px solid rgba(128,128,128,.5);
 }

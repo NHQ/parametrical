@@ -3,10 +3,9 @@ var touchdown = require('touchdown')
 var findPos = require('./findPosition')
 
 module.exports = function(p){
+  var parEl = parent(p.el)
   var curves = p.value 
   var canvas = canv()//document.createElement('canvas')
-  var parEl = parent()
-
   parEl.appendChild(canvas)
   
   var draw = function(){
@@ -15,7 +14,8 @@ module.exports = function(p){
     ctx.clearRect(0,0,canvas.width, canvas.height)
     ctx.moveTo(0, canvas.height)
     ctx.beginPath()
-    ctx.lineWidth = 7
+    ctx.translate(.5, .5)
+    ctx.lineWidth = 5
     ctx.lineColor = 'yellow'
     for(var x = 0; x < canvas.width; x+=1 ){
       var s = solve( x / canvas.width)
@@ -26,6 +26,7 @@ module.exports = function(p){
   var dots = []
 
   var done = false
+  donce()
 
   var observer = new MutationObserver(function(mutations){
     mutations.forEach(function(e){
@@ -62,7 +63,6 @@ module.exports = function(p){
     draw()
     var pas = findPos(parEl)
     setTimeout(function(){
-    
       curves.forEach(function(e, i){
         ;(function(e, i){
           canvas.pos = findPos(canvas)
@@ -76,8 +76,8 @@ module.exports = function(p){
           })
           dot.addEventListener('deltavector', function(e){
             window.requestAnimationFrame(function(){
-              dot.style.left = e.detail.x - pas[0]  + window.scrollX - 6 + 'px'
-              dot.style.top =  e.detail.y - pas[1]  + window.scrollY - 6 + 'px'
+              dot.style.left = e.detail.x - pas[0]  + window.scrollX - 15 + 'px'
+              dot.style.top =  e.detail.y - pas[1]  + window.scrollY - 15 + 'px'
               curves[i][0] = (e.detail.x  - (canvas.pos[0] - window.scrollX)) / canvas.width
               curves[i][1] = (canvas.height - e.detail.y + (canvas.pos[1] - window.scrollY)) / canvas.height
               draw()
@@ -88,16 +88,16 @@ module.exports = function(p){
       })
     
     
-    }, 1000)
+    }, 10)
   }
 
   return parEl
 
-  function parent(){
-    var node = document.createElement('div')
+  function parent(el){
+    var node = el || document.createElement('div')
     var $ = node.style
-    $.width = 400 + 'px'
-    $.height = 244 + 'px'
+//    $.width = 400 + 'px'
+//    $.height = 244 + 'px'
     $.border = '3px solid black'
     $.display = 'inline-flex'
     $.alignItems =  'center'
@@ -110,11 +110,11 @@ module.exports = function(p){
   function canv(){
     var node = document.createElement('canvas')
     var $ = node.style
-    node.width = 244
+    node.width = parseFloat(window.getComputedStyle(parEl).width)
     $.width  = node.width + 'px'
-    node.height = 122
+    node.height = parseFloat(window.getComputedStyle(parEl).height)
     $.height = node.height + 'px'
-    $.border = '3px solid black'
+    //$.border = '3px solid black'
     $.boxSizing = 'border-box'
     $.backgroundColor ='#eee'
     $.backgroundImage = 'linear-gradient(45deg, gray 25%, transparent 25%, transparent 75%, gray 75%, gray), linear-gradient(45deg, gray 25%, transparent 25%, transparent 75%, gray 75%, gray)'
@@ -131,6 +131,7 @@ module.exports = function(p){
     var node = document.createElement('div')
     var $ = node.style
     var r = 15
+    node.classList.add('handle')
     $.height = $.width = r+'px'
     $.position = 'absolute'
     $.border = '3px solid black'
@@ -138,8 +139,9 @@ module.exports = function(p){
     $.borderRadius = '50% 50%'
     $.zIndex = '100'
     var pas = findPos(parEl)
-    $.left = vec[0] * canvas.width + pos[0] - pas[0] - 6 + 'px'
-    $.top = pos[1] + canvas.height - canvas.height * vec[1] - pas[1] - 6 +  'px'
+    console.log(pas, parseInt(canvas.height))
+    $.left = vec[0] * parseInt(canvas.width) - r + 'px'
+    $.top = (1 - vec[1]) * parseInt(canvas.height) - r +  'px'
     return node
 
   }
