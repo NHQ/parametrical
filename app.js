@@ -17,7 +17,7 @@ var st = ui({
     { type: 'dial', value: 1/8, step: 1/8, mag: 1, el: model.children[2] },
   xy: {type: 'xy', range:[-1,-1,1,1], el: model.children[4], name: 'ps'},
   xy22: {type: 'xy', range:[-1,-1,1,1], el: model.children[5], name: 'ps2'},
-  env: {type: 'bezier', value: [[0,0],[0,1],[.5, .5], [1,1],[1,0]], el: model.children[0], name: 'thumb'}
+  env: {type: 'bezier', value: [[0,0],[0,1],[1,1],[1,0]], el: model.children[0], name: 'thumb'}
 })
 
 
