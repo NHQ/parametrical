@@ -19,6 +19,8 @@ function parama(pms, cb){
   function paramaTheMapper(pms, cb){
     var state = {}
     var keys = Object.keys(pms)
+
+    // map keys 
     var ui = keys.map(function(key,i){
       
       if(typeof pms[key] === 'number'){
@@ -39,25 +41,25 @@ function parama(pms, cb){
           if(state[key] === 1) state[key] = e.value = [[0,0], [1/4, 1], [3/4, 1/2], [1,0]]
           el = amod(e, function(curves){
             state[key] = curves
-            cb(state[key])
+            cb(state[key], e.name || key)
           })
         break
         case 'shot':
           el = shot(e, function(_switch){
             state[key] = _switch ? e.true : e.false
-            cb(state[key])
+            cb(state[key], e.name || key)
           })
           break
         case 'bpm':
           el = bpm(e, function(bpm, interval){
             state[key] = bpm
-            cb(state[key])
+            cb(state[key], e.name || key)
           })
           break
         case 'button':
           el = button(e, function(_switch){
             state[key] = _switch ? e.true : e.false
-            cb(state[key])
+            cb(state[key], e.name || key)
           })
         break
         case 'knob':
@@ -65,7 +67,7 @@ function parama(pms, cb){
           var fn = e.step === false ? satoshi : stepper
           el = knob(e, function(d, a){
             state[key] = Math.max(e.min, Math.min(e.max, fn(d, a)))
-            cb(state[key])
+            cb(state[key], e.name || key)
           })
           function stepper(d, a){
             return e.value + Math.floor(a * e.mag) * e.step
@@ -86,7 +88,7 @@ function parama(pms, cb){
             y = Math.max(e.range[1], Math.min(e.range[3], y))
             state[key][0] = x
             state[key][1] = y
-            cb(state[key])
+            cb(state[key], e.name || key)
           }) 
         break
       }

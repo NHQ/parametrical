@@ -2,7 +2,7 @@ var solver = require('beezy')
 var touchdown = require('touchdown')
 var findPos = require('./findPosition')
 
-module.exports = function(p){
+module.exports = function(p, cb){
   var parEl = parent(p.el)
   var curves = p.value 
   var canvas = canv()//document.createElement('canvas')
@@ -76,6 +76,7 @@ module.exports = function(p){
               dot.style.top =  e.detail.y - pas.top  + window.scrollY - 15 + 'px'
               curves[i][0] = ((e.detail.x + window.scrollX) - canvas.pos.left) / canvas.pos.width
               curves[i][1] =  ((canvas.pos.top + canvas.height) - (e.detail.y + window.scrollY))/ canvas.pos.height
+              cb(curves)
               draw()
             })
           })
