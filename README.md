@@ -2,6 +2,7 @@
 
 An instant interface for your function. You give it your parameters; it gives you a multi-touch enabled, cross device compatible front-end.
 
+![screen shot](public/parametrical_sceen.png)
 
 ## example from entry.js
 
