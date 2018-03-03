@@ -1,8 +1,8 @@
 # parametrical 
 
-An instant interface for your function. You give it your parameters; it gives you a multi-touch enabled, cross device compatible front-end.
+An instant interface for your function. You give it your parameters; it gives you a multi-touch enabled, cross device compatible UI.
 
-![screen shot](parametrical_sceen.png)
+![screen shot](parametrical_screen.png)
 
 ## example from entry.js
 
