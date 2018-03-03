@@ -2,7 +2,7 @@
 
 An instant interface for your function. You give it your parameters; it gives you a multi-touch enabled, cross device compatible UI.
 
-![screen shot](parametrical_screen.png)
+![screen shot](public/parametrical_screen.png)
 
 ## example from entry.js
 
