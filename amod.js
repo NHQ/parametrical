@@ -1,4 +1,4 @@
-var solver = require('beezy')
+var solver = require('../beezy')
 var touchdown = require('touchdown')
 var findPos = require('./findPosition')
 
@@ -113,10 +113,10 @@ module.exports = function(p, cb){
     $.height = node.height + 'px'
     //$.border = '3px solid black'
     $.boxSizing = 'border-box'
-    $.backgroundColor ='#eee'
-    $.backgroundImage = 'linear-gradient(45deg, gray 25%, transparent 25%, transparent 75%, gray 75%, gray), linear-gradient(45deg, gray 25%, transparent 25%, transparent 75%, gray 75%, gray)'
-    $.backgroundSize='30px 30px'
-    $.backgroundPosition = '0 0, 15px 15px'
+    $.backgroundImage = 'linear-gradient(45deg, #808080 25%, transparent 25%), linear-gradient(-45deg, #808080 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #808080 75%), linear-gradient(-45deg, transparent 75%, #808080 75%)';
+    
+    $.backgroundSize='20px 20px'
+    $.backgroundPosition = '0 0, 0 10px, 10px -10px, -10px 0px' 
 
     return node
 

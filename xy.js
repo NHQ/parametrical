@@ -16,7 +16,11 @@ module.exports = function(p, cb){
     cb(nxy)
     update(xy)
   }, p.value)
+  var xr = p.range[2] - p.range[0]
+  var yr = p.range[3] - p.range[1]
 
+  if(p.value) update([el.width / xr + p.value[0] * el.width / xr, el.height - (el.height / yr + p.value[1] * el.height / yr)])
+  else update([el.width/2, el.height/2])
   return el
 
   function update(xy){

@@ -14,16 +14,16 @@ module.exports = function(param, cb){
   }
 
     var amplitude = 0
-      spin(knob, function(_delta, a){
-      //console.log(_delta, a)
-        //console.log(total * 180 / Math.PI)
-        amplitude = amplitude + -_delta 
-        cb(-_delta, amplitude / Math.PI / 2)
-        ;(function(el, _delta){
-          window.requestAnimationFrame(function(){
-            el.style.transform = 'rotateZ('+ (2 * amplitude * 180 / Math.PI ) + 'deg)'
-        })})(knob, _delta)
-      })
+    spin(knob, function(_delta, a){
+    //console.log(_delta, a)
+      //console.log(total * 180 / Math.PI)
+      amplitude = amplitude + -_delta 
+      cb(-_delta, amplitude / Math.PI / 2)
+      ;(function(el, _delta){
+        window.requestAnimationFrame(function(){
+          el.style.transform = 'rotateZ('+ (2 * amplitude * 180 / Math.PI ) + 'deg)'
+      })})(knob, _delta)
+    })
     
 
   return knob

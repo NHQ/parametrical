@@ -32,7 +32,7 @@ function parama(pms, cb){
       
       var e = pms[key]
       
-      state[key] = e.value
+      state[key] = e.value || null
 
       var el = undefined
       switch(e.type){
@@ -78,6 +78,7 @@ function parama(pms, cb){
         break;
         case 'xy':
         case 'grid':
+          state[key] = e.value || [0,0]
           el = xyify(e, function(xy){
             var xr = e.range[2] - e.range[0]
             var yr = e.range[3] - e.range[1]
@@ -105,7 +106,7 @@ function parama(pms, cb){
 
 function conf(p, key){
   if(!p.type) p.type = 'knob'
-  if(!p.value) p.value = 1
+  if(!p.value) p.value = null 
   if(!p.mag) p.mag = 1
   if(!p.max) p.max = Infinity
   if(!p.min) p.min = -Infinity
