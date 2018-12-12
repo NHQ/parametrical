@@ -21,15 +21,15 @@
 .amod{
   margin: 0;
   padding: 0;
-  width: 200px;
-  height: 200px;
+  width: 300px;
+  height: 300px;
   box-sizing: border-box;
 }
 
 .handle{
   margin: 0;
   padding: 0;
-  opacity:.6;
+  opacity:.9;
 }
 
 .xy{

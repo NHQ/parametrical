@@ -4,7 +4,7 @@ var cstyle = require('../see-style')
 
 var master = new AudioContext
 var sr = master.sampleRate
-
+var beezy = require('../beezy')
 var jsynth = require('../jsynth')
 var $ = require('../polysynth/cheatcode')
 var getids = require('getids')
@@ -71,23 +71,40 @@ var st = ui(config, function(v, e){
     start = true
   
   }
-  bz = beezmod() // refresh env 
+  bz = as(state.a, state.s, .1, 1/2) // refresh env 
   if(e==='ps')iir=$.iir(Math.abs(Math.floor(v[0])), Math.abs(Math.floor(v[1])))
 })
 
 var state = st.state
 var beezmod = function(){
-  let pts = state.s//[[0, 1/2], [.5, 1], [.5, .5], [.5, 0], [1, 1/2]]
+  let pts = state.env2//[[0, 1/2], [.5, 1], [.5, .5], [.5, 0], [1, 1/2]]
   let env = $.beezxy(pts)
   pts = pts.reduce((a,e) => { a[0].push(e[0]); a[1].push(e[1]); return a }, [[],[]])
   return function(c, t, f){
     pts[0][2] = .5 + $.oz.sine(t, f * -state.g) / 2
-    var e = env((t * 1) % 1, pts)
+    var e = env((t * f) % 1, pts)
     return e
   }
 }
+var tzmod = beezmod()
 
-var bz = beezmod()
+var as = function(a, s, ad, sd){
+  var ae = $.beezxy(a)
+  var se = $.beezxy(s)
+  a = a.reduce((a,e) => { a[0].push(e[0]); a[1].push(e[1]); return a }, [[],[]])
+  s = s.reduce((a,e) => { a[0].push(e[0]); a[1].push(e[1]); return a }, [[],[]])
+  var alt = [1,0]
+  var ez = [ae, se]
+  return function(t){
+    var tt = t / ad
+    var e = Math.floor(Math.min(tt, 1)) // should be zero if t < attack duration, else 1
+    var z = alt.map(i => i ^ e)
+    return ae(t % ad, a)[1] * z[0] + se((t + ad) % sd, s)[1] * z[1]
+  }
+}
+
+
+var bz = as(state.a, state.s, .1, 1/2)//beezmod()
 var bpm = 149.5
 var iir = $.iir(4,12)
 var dld, dl2d
@@ -96,8 +113,8 @@ var dl = $.jdelay(dld = Math.floor(sampleRate * 60 / bpm / 15/2), .8, 1/2)
 var dl2 = $.jdelay(dl2d = Math.floor(sampleRate * 60 / bpm * 3 / 2), .4, 1/2) 
 
 var synth = jsynth(master, function(t, s, i){
-  var e = bz(.25, t * bpm/60, state.f)
-  //return $.oz.sine(e[0], 440/2) * e[1]
+  var e = bz(t)
+  return $.oz.sine(t, 440) * e
   var c = $.gtone(e[0],  Math.PI * (113 - ((t*bpm/60) % 24)), $.amod(0, Math.E, e[0], 15), $.amod(Math.PI, Math.PI, e[0], -1/18), Math.E, 31, $.ph.sine, $.amod(0, 1/2, e[0], -state.amod2))
   if(t%1==0) console.log(state.amod)
   return (dl2(iir(dl(c * e[1])) * $.winfunk.planckt(t, 333,11), dl2d, $.amod(state.gain2, .4, e[0], -state.amod), 1/2)) * state.gain //(music(t, s, i))
