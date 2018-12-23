@@ -1,8 +1,10 @@
+var $ = require('./cheatcode.js')
 var solver = require('../beezy/beezy.js')
 var touchdown = require('touchdown')
 var findPos = require('./findPosition')
 var colors = 'red,orange,yellow,green,blue,indigo,violet'.split(',')
-console.log(colors)
+var dist = require('./trig.js').distance
+
 module.exports = function(p, cb){
   var parEl = parent(p.el)
   var curves = p.value 
@@ -28,7 +30,7 @@ module.exports = function(p, cb){
     ctx.beginPath()
     for(var x = 0; x < canvas.width; x+=1 ){
       var s = solve( x / canvas.width)
-      ctx.lineTo(x, (1 - s[2]) * canvas.height)
+      ctx.lineTo(x, (1 - s[1]) * canvas.height)
     }
     ctx.stroke()
     ctx.moveTo(0, canvas.height)
@@ -39,6 +41,42 @@ module.exports = function(p, cb){
       ctx.lineTo(x, (1 - s[0]) * canvas.height)
     }
     ctx.stroke()
+    ctx.moveTo(0, canvas.height)
+    ctx.strokeStyle = colors[4]
+    ctx.beginPath()
+    var prev = 0
+    for(var x = 0; x < canvas.width; x+=1 ){
+      var s = solve( x / canvas.width)
+      var l = curves[0][1]
+      var u = curves[curves.length-1][1]
+      var w = canvas.width
+      var h = canvas.height
+      ctx.lineTo(x, (h)-(Math.pow(x/w, 1/Math.exp((curves[1][1]*12-6) * Math.log($.amod(1, 2, x / w, 3)))) * h * (u-l) + l*h ))
+    }
+    ctx.stroke()
+    var tx = (xy)=>{
+    var degree = 45
+  var c = Math.cos(deg*Math.PI/180)
+  var s = Math.sin(deg*Math.PI/180)
+  var tan = Math.tan(deg*Math.PI/180)
+
+  return [(((xy[0]) * c) - ((xy[1]) * s)), ((xy[0]) * s) + (( xy[1]) * c)]
+}
+
+    ctx.moveTo(0, canvas.height)
+    ctx.strokeStyle = 'pink'
+    ctx.beginPath()
+    var prev = 0
+    for(var x = 0; x < canvas.width; x+=1 ){
+      var s = solve( x / canvas.width)
+      var l = curves[0][1]
+      var u = curves[curves.length-1][1]
+      var w = canvas.width
+      var h = canvas.height
+      ctx.lineTo(x, (h)-tx(x/w, (Math.pow(x/w, 1/Math.exp((curves[1][1]*12-6) * Math.log($.amod(1, 2, x / w, 3)))) * h * (u-l) + l*h )))
+    }
+    ctx.stroke()
+  
   }
   var dots = []
 

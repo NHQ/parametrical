@@ -44,7 +44,7 @@ var {config, elements} = init({
     { type: 'dial', value: 1/3, step: 1/9, mag: 9, name:"mafoosa"},
     f: { type: 'dial', value: 1/6, step: 1/9, mag: 10, name: 'f'},
     g: { type: 'dial', value: 1/8, step: 1/10, mag: 10, name: 'g'},
-    a: {type: 'amod', value: [[0,0],[0,3/2], [1,3/4]], name: 'athumb'},
+    a: {type: 'amod', value: [[0,0],[0,3/2], [1,1]], name: 'athumb'},
     s: {type: 'amod', value: [[0,3/4],[1/2,1/4],[1/2, 3/4],[2/4, 1.25],[1,3/4]], name: 'sthumb'},
     d: {type: 'amod', value: [[0,3/4],[1/2, 1/2], [1,1/4]], name: 'dthumb'},
     r: {type: 'amod', value: [[0,1/4],[0,0], [1,0]], name: 'rthumb'},
@@ -87,6 +87,14 @@ var beezmod = function(){
   }
 }
 var tzmod = beezmod()
+
+var rotate = (deg, xy)=>{
+  var c = Math.cos(deg*Math.PI/180)
+  var s = Math.sin(deg*Math.PI/180)
+  var tan = 1/Math.tan(deg*Math.PI/180)
+
+  return [(((xy[0]) * c) - ((xy[1]) * s)) + xy[1] * tan, ((xy[0]) * s) + (( xy[1]) * c)] 
+}
 
 var as = function(a, s, ad, sd){
   var ae = $.beezxy(a)

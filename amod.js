@@ -51,9 +51,37 @@ module.exports = function(p, cb){
       var u = curves[curves.length-1][1]
       var w = canvas.width
       var h = canvas.height
-      ctx.lineTo(x, (h)-(Math.pow(x/w, 1/Math.exp((curves[1][1]*12-6) * Math.log($.amod(1, 2, x / w, 3)))) * h * (u-l) + l ))
+      ctx.lineTo(x, (h)-(Math.pow(x/w, 1/Math.exp((curves[1][1]*12-6) * Math.log($.amod(1, 2, x / w, 3)))) * h * (u-l) + l*h ))
     }
     ctx.stroke()
+    var tx = (xy)=>{
+    var deg = -45
+  var c = Math.cos(deg*Math.PI/180)
+  var s = Math.sin(deg*Math.PI/180)
+  var tan = 0//Math.tan(deg*Math.PI/180)
+
+  return [(((xy[0]) * c) + ((xy[1]) * -s)), ((((xy[0]) * s) + (( xy[1]) * c) + tan * xy[1]))*1/1.4142]
+}
+
+    ctx.moveTo(0, canvas.height)
+    ctx.strokeStyle = 'yellow'
+    ctx.beginPath()
+    var prev = 0
+    for(var x = 0; x < canvas.width; x+=1 ){
+      var s = solve( x / canvas.width)
+      var l = curves[0][1]
+      var u = curves[curves.length-1][1]
+      var w = canvas.width
+      var h = canvas.height
+      var q
+      let c = tx([x/w, q=((Math.pow(x/w, 1/Math.exp(((curves[1][1]-.5)*12) * Math.log($.amod(1, 2, x / w, 3)))) * (u-l) + l*h ))])
+      //console.log(x/w, q, c)
+      ctx.lineTo(x, (h - c[1]*h)-h/2)
+    }
+    ctx.stroke()
+    //process.exit()
+    
+    
   }
   var dots = []
 
