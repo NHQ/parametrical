@@ -13,70 +13,18 @@ module.exports = function(p, cb){
   
   const ctx = canvas.getContext('2d')
   ctx.translate(.5, .5)
-  var draw = function(){
+  var draw = function(state){
     var solve = solver(curves)
     ctx.clearRect(0,0,canvas.width, canvas.height)
     ctx.moveTo(0, canvas.height)
     ctx.beginPath()
     ctx.lineWidth = 7
     ctx.strokeStyle = colors[5]
-    for(var x = 0; x < canvas.width; x+=1 ){
-      var s = solve( x / canvas.width)
-      ctx.lineTo(s[0] * canvas.width, (1 - s[1]) * canvas.height)
-    }
-    ctx.stroke()
-    ctx.moveTo(0, canvas.height)
-    ctx.strokeStyle = colors[3]
     ctx.beginPath()
-    for(var x = 0; x < canvas.width; x+=1 ){
-      var s = solve( x / canvas.width)
-      ctx.lineTo(x, (1 - s[1]) * canvas.height)
-    }
-    ctx.stroke()
-    ctx.moveTo(0, canvas.height)
-    ctx.strokeStyle = colors[0]
-    ctx.beginPath()
-    for(var x = 0; x < canvas.width; x+=1 ){
-      var s = solve( x / canvas.width)
-      ctx.lineTo(x, (1 - s[0]) * canvas.height)
-    }
-    ctx.stroke()
-    ctx.moveTo(0, canvas.height)
-    ctx.strokeStyle = colors[4]
-    ctx.beginPath()
-    var prev = 0
-    for(var x = 0; x < canvas.width; x+=1 ){
-      var s = solve( x / canvas.width)
-      var l = curves[0][1]
-      var u = curves[curves.length-1][1]
-      var w = canvas.width
-      var h = canvas.height
-      ctx.lineTo(x, (h)-(Math.pow(x/w, 1/Math.exp((curves[1][1]*12-6) * Math.log($.amod(1, 2, x / w, 3)))) * h * (u-l) + l*h ))
-    }
-    ctx.stroke()
-    var tx = (xy)=>{
-    var deg = -45
-  var c = Math.cos(deg*Math.PI/180)
-  var s = Math.sin(deg*Math.PI/180)
-  var tan = 0//Math.tan(deg*Math.PI/180)
 
-  return [(((xy[0]) * c) + ((xy[1]) * -s)), ((((xy[0]) * s) + (( xy[1]) * c) + tan * xy[1]))*1/1.4142]
-}
-
-    ctx.moveTo(0, canvas.height)
-    ctx.strokeStyle = 'yellow'
-    ctx.beginPath()
-    var prev = 0
     for(var x = 0; x < canvas.width; x+=1 ){
-      var s = solve( x / canvas.width)
-      var l = curves[0][1]
-      var u = curves[curves.length-1][1]
-      var w = canvas.width
-      var h = canvas.height
-      var q
-      let c = tx([x/w, q=((Math.pow(x/w, 1/Math.exp(((curves[1][1]-.5)*12) * Math.log($.amod(1, 2, x / w, 3)))) * (u-l) + l*h ))])
-      //console.log(x/w, q, c)
-      ctx.lineTo(x, (h - c[1]*h)-h/2)
+    var w = x/canvas.width 
+      ctx.lineTo(x, (1 - $.amod(state[0], $.oz.saw(w, 1/2) * (curves[0][1] - .5), w, curves[0][0]*8 )) * canvas.height )
     }
     ctx.stroke()
     //process.exit()
@@ -117,7 +65,7 @@ module.exports = function(p, cb){
     if(done) return
     done = true
     canvas.pos = canvas.getBoundingClientRect()//findPos(canvas)
-    draw()
+    draw([1/2, 1/4, 4])
     var pas = parEl.getBoundingClientRect()
     setTimeout(function(){
       curves.forEach(function(e, i){
@@ -137,7 +85,7 @@ module.exports = function(p, cb){
               curves[i][0] = ((e.detail.x + window.scrollX) - canvas.pos.left) / canvas.pos.width
               curves[i][1] =  ((canvas.pos.top + canvas.height) - (e.detail.y + window.scrollY))/ canvas.pos.height
               cb(curves)
-              draw()
+              draw([1/2, 1/4, 4])
             })
           })
           parEl.appendChild(dot)

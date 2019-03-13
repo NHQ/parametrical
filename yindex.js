@@ -6,6 +6,8 @@ var button = require('./button')
 var bpm = require('./bpm')
 var shot = require('./shot')
 var amod = require('./amod')
+var eezy = require('./eezy')
+var bezier = require('./bezier')
 
 module.exports = parama 
 
@@ -36,10 +38,25 @@ function parama(pms, cb){
 
       var el = undefined
       switch(e.type){
+        case 'eezy':
+        case 'adsr':
+        case 'env':
+          if(state[key] === 1) state[key] = e.value = [[0,0], [1/4, 1], [3/4, 1/2], [1,0]]
+          el = eezy(e, function(curves){
+            state[key] = curves
+            cb(state[key], e.name || key)
+          })
+        break
         case 'amod':
-        case 'bezier':
           if(state[key] === 1) state[key] = e.value = [[0,0], [1/4, 1], [3/4, 1/2], [1,0]]
           el = amod(e, function(curves){
+            state[key] = curves
+            cb(state[key], e.name || key)
+          })
+        break
+        case 'bezier':
+          if(state[key] === 1) state[key] = e.value = [[0,0], [1/4, 1], [3/4, 1/2], [1,0]]
+          el = bezier(e, function(curves){
             state[key] = curves
             cb(state[key], e.name || key)
           })
@@ -106,11 +123,11 @@ function parama(pms, cb){
 
 function conf(p, key){
   if(!p.type) p.type = 'knob'
-  if(!p.value) p.value = null 
+  if(p.value === undefined) p.value = null 
   if(!p.mag) p.mag = 1
   if(!p.max) p.max = Infinity
   if(!p.min) p.min = -Infinity
-  if(!p.name) p.name = key + '_lamda'
+  if(!p.name) p.name = key //+ '_lamda'
   if(!p.step) p.step = false
   if(!p.true) p.true = true
   if(p.false === undefined) p.false =  false
